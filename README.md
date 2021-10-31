@@ -4,9 +4,9 @@
 [![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Matrix53&layout=compact&theme=radical&card_width=445)](https://github.com/anuraghazra/github-readme-stats)
 
 - 🔭 I’m currently studying at BUAA
-- 🌱 I’m currently learning React and Django
+- 🌱 I’m currently learning Rust
 - 👯 I’m looking to collaborate on vscode project
-- 💬 Ask me about Vue or Python
+- 💬 Ask me about anything
 - 📫 How to reach me: Send email to 1079207272@qq.com
 - ⚡ Fun fact: Software college is a perfectly relaxing place
 
