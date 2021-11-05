@@ -5,10 +5,7 @@
 
 - 🔭 I’m currently studying at BUAA
 - 🌱 I’m currently learning Rust
-- 👯 I’m looking to collaborate on vscode project
 - 💬 Ask me about anything
-- 📫 How to reach me: Send email to 1079207272@qq.com
-- ⚡ Fun fact: Software college is a perfectly relaxing place
 
 <!--
 **Matrix53/Matrix53** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
