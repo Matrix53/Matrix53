@@ -4,8 +4,8 @@
 [![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Matrix53&layout=compact&theme=radical&card_width=445)](https://github.com/anuraghazra/github-readme-stats)
 
 - 🔭 I’m currently studying at BUAA
-- 🌱 I’m currently learning Golang
-- 💬 Ask me about anything
+- 🌱 I’m currently learning ML
+- 💬 Ask me about frontend development
 
 <!--
 **Matrix53/Matrix53** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
