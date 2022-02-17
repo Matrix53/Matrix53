@@ -6,7 +6,8 @@
 - 🔭 I’m currently studying at BUAA
 - 🌱 I’m currently learning ML
 - 💬 Ask me about frontend development
-
+- 📃 Welcome to visit my [blog](https://blog.matrix53.top)
+- 📫 How to reach me: <a href="mailto:1079207272@qq.com">email</a>
 <!--
 **Matrix53/Matrix53** is a ✨ _special_ ✨ repository because its `README.md` (this file) appears on your GitHub profile.
 
