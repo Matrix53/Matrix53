@@ -3,8 +3,8 @@
 
 [![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Matrix53&layout=compact&theme=radical&card_width=445)](https://github.com/anuraghazra/github-readme-stats)
 
-- 🔭 I’m currently studying at BUAA
-- 🌱 I’m currently learning ML
+- 🔭 I’m currently studying at [BUAA](https://en.wikipedia.org/wiki/Beihang_University)
+- 🌱 I’m currently learning [ML](https://en.wikipedia.org/wiki/Machine_learning)
 - 💬 Ask me about frontend development
 - 📃 Welcome to visit my [blog](https://blog.matrix53.top)
 - 📫 How to reach me: <a href="mailto:1079207272@qq.com">email</a>
