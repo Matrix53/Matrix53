@@ -30,7 +30,6 @@ query($login: String!) {
     repositoriesContributedTo(
       first: 1
       includeUserRepositories: false
-      orderBy: {direction: DESC, field: CONTRIBUTED_AT}
     ) { totalCount }
     repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
       totalCount
