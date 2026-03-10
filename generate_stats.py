@@ -20,6 +20,10 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 
+class InsufficientScopesError(RuntimeError):
+    pass
+
+
 def run_query(query, variables=None):
     resp = requests.post(
         GRAPHQL_URL,
@@ -30,6 +34,16 @@ def run_query(query, variables=None):
     resp.raise_for_status()
     result = resp.json()
     if "errors" in result:
+        if any(e.get("type") == "INSUFFICIENT_SCOPES" for e in result["errors"]):
+            scopes_needed = set()
+            for e in result["errors"]:
+                msg = e.get("message", "")
+                if "read:org" in msg:
+                    scopes_needed.add("read:org")
+            raise InsufficientScopesError(
+                f"Token missing scopes: {scopes_needed}. "
+                "Add them at https://github.com/settings/tokens"
+            )
         raise RuntimeError(f"GraphQL errors: {result['errors']}")
     return result["data"]
 
@@ -143,24 +157,29 @@ def get_stars() -> int:
         after = repos["pageInfo"]["endCursor"]
 
     # Org repos where viewer can administer
-    orgs_data = run_query(ORGS_QUERY)
-    admin_orgs = [
-        org["login"]
-        for org in orgs_data["viewer"]["organizations"]["nodes"]
-        if org["viewerCanAdminister"]
-    ]
-    print(f"  Admin orgs: {admin_orgs or 'none'}")
+    try:
+        orgs_data = run_query(ORGS_QUERY)
+        admin_orgs = [
+            org["login"]
+            for org in orgs_data["viewer"]["organizations"]["nodes"]
+            if org["viewerCanAdminister"]
+        ]
+        print(f"  Admin orgs: {admin_orgs or 'none'}")
 
-    for org_login in admin_orgs:
-        after = None
-        while True:
-            data = run_query(ORG_REPOS_STARS_QUERY, {"org": org_login, "after": after})
-            org_repos = data["organization"]["repositories"]
-            for r in org_repos["nodes"]:
-                stars += r["stargazerCount"]
-            if not org_repos["pageInfo"]["hasNextPage"]:
-                break
-            after = org_repos["pageInfo"]["endCursor"]
+        for org_login in admin_orgs:
+            after = None
+            while True:
+                data = run_query(ORG_REPOS_STARS_QUERY, {"org": org_login, "after": after})
+                org_repos = data["organization"]["repositories"]
+                for r in org_repos["nodes"]:
+                    stars += r["stargazerCount"]
+                if not org_repos["pageInfo"]["hasNextPage"]:
+                    break
+                after = org_repos["pageInfo"]["endCursor"]
+
+    except InsufficientScopesError as e:
+        print(f"  WARNING: Skipping org stars — {e}")
+        print("  To include org stars, add 'read:org' scope to your PAT.")
 
     return stars
 
