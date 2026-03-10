@@ -57,10 +57,6 @@ query($login: String!) {
     pullRequests(first: 1) { totalCount }
     openIssues:   issues(states: OPEN)   { totalCount }
     closedIssues: issues(states: CLOSED) { totalCount }
-    repositoriesContributedTo(
-      first: 1
-      includeUserRepositories: false
-    ) { totalCount }
     repositories(ownerAffiliations: [OWNER], isFork: false, first: 1) {
       totalCount
     }
@@ -103,12 +99,30 @@ ORGS_QUERY = """
 }
 """
 
-ORG_REPOS_STARS_QUERY = """
+ORG_REPOS_QUERY = """
 query($org: String!, $after: String) {
   organization(login: $org) {
-    repositories(first: 100, after: $after) {
+    repositories(first: 100, after: $after, isFork: false) {
       pageInfo { hasNextPage endCursor }
       nodes { stargazerCount }
+    }
+  }
+}
+"""
+
+CONTRIB_REPOS_YEAR_QUERY = """
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    contributionsCollection(from: $from, to: $to) {
+      commitContributionsByRepository(maxRepositories: 100) {
+        repository { nameWithOwner }
+      }
+      pullRequestContributionsByRepository(maxRepositories: 100) {
+        repository { nameWithOwner }
+      }
+      issueContributionsByRepository(maxRepositories: 100) {
+        repository { nameWithOwner }
+      }
     }
   }
 }
@@ -141,12 +155,43 @@ def get_all_time_commits(created_at: str) -> int:
     return total
 
 
-def get_stars() -> int:
-    """Stars from own repos + org repos where viewer is owner/admin."""
-    stars = 0
+def get_admin_orgs() -> list[str]:
+    """Return org logins where viewer can administer. Requires read:org scope."""
+    try:
+        orgs_data = run_query(ORGS_QUERY)
+        orgs = [
+            org["login"]
+            for org in orgs_data["viewer"]["organizations"]["nodes"]
+            if org["viewerCanAdminister"]
+        ]
+        print(f"  Admin orgs: {orgs or 'none'}")
+        return orgs
+    except InsufficientScopesError as e:
+        print(f"  WARNING: Cannot fetch orgs — {e}")
+        print("  To include org data, add 'read:org' scope to your PAT.")
+        return []
 
-    # Personal repos (paginated)
-    after = None
+
+def get_org_stats(admin_orgs: list[str]) -> tuple[int, int]:
+    """Paginate non-fork repos in admin orgs. Returns (total_stars, repo_count)."""
+    stars, repo_count = 0, 0
+    for org_login in admin_orgs:
+        after = None
+        while True:
+            data = run_query(ORG_REPOS_QUERY, {"org": org_login, "after": after})
+            repos = data["organization"]["repositories"]
+            for r in repos["nodes"]:
+                stars += r["stargazerCount"]
+                repo_count += 1
+            if not repos["pageInfo"]["hasNextPage"]:
+                break
+            after = repos["pageInfo"]["endCursor"]
+    return stars, repo_count
+
+
+def get_personal_stars() -> int:
+    """Stars from personal repos (paginated)."""
+    stars, after = 0, None
     while True:
         data = run_query(OWN_REPOS_STARS_QUERY, {"login": USERNAME, "after": after})
         repos = data["user"]["repositories"]
@@ -155,33 +200,39 @@ def get_stars() -> int:
         if not repos["pageInfo"]["hasNextPage"]:
             break
         after = repos["pageInfo"]["endCursor"]
-
-    # Org repos where viewer can administer
-    try:
-        orgs_data = run_query(ORGS_QUERY)
-        admin_orgs = [
-            org["login"]
-            for org in orgs_data["viewer"]["organizations"]["nodes"]
-            if org["viewerCanAdminister"]
-        ]
-        print(f"  Admin orgs: {admin_orgs or 'none'}")
-
-        for org_login in admin_orgs:
-            after = None
-            while True:
-                data = run_query(ORG_REPOS_STARS_QUERY, {"org": org_login, "after": after})
-                org_repos = data["organization"]["repositories"]
-                for r in org_repos["nodes"]:
-                    stars += r["stargazerCount"]
-                if not org_repos["pageInfo"]["hasNextPage"]:
-                    break
-                after = org_repos["pageInfo"]["endCursor"]
-
-    except InsufficientScopesError as e:
-        print(f"  WARNING: Skipping org stars — {e}")
-        print("  To include org stars, add 'read:org' scope to your PAT.")
-
     return stars
+
+
+def get_all_time_contributed_repos(created_at: str) -> int:
+    """Count unique repos (not owned by user) contributed to across all years."""
+    created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    all_repos: set[str] = set()
+    year = created.year
+    while year <= now.year:
+        from_dt = f"{year}-01-01T00:00:00Z"
+        to_dt = (
+            now.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if year == now.year
+            else f"{year}-12-31T23:59:59Z"
+        )
+        data = run_query(CONTRIB_REPOS_YEAR_QUERY, {
+            "login": USERNAME, "from": from_dt, "to": to_dt,
+        })
+        cc = data["user"]["contributionsCollection"]
+        for category in (
+            "commitContributionsByRepository",
+            "pullRequestContributionsByRepository",
+            "issueContributionsByRepository",
+        ):
+            for item in cc[category]:
+                name = item["repository"]["nameWithOwner"]
+                # Exclude user's own personal repos (they're counted in "Total Repos")
+                if not name.lower().startswith(f"{USERNAME.lower()}/"):
+                    all_repos.add(name)
+        year += 1
+    print(f"  All-time contributed repos: {len(all_repos)}")
+    return len(all_repos)
 
 
 # ── SVG ───────────────────────────────────────────────────────────────────────
@@ -295,15 +346,26 @@ def main():
     created_at = base["createdAt"]
     prs = base["pullRequests"]["totalCount"]
     issues = base["openIssues"]["totalCount"] + base["closedIssues"]["totalCount"]
-    repos = base["repositories"]["totalCount"]
-    contributed = base["repositoriesContributedTo"]["totalCount"]
+    personal_repos = base["repositories"]["totalCount"]
 
     print(f"  Account created: {created_at}")
+
+    # Org stats (stars + repo count) — requires read:org scope
+    print("  Fetching org admin repos...")
+    admin_orgs = get_admin_orgs()
+    org_stars, org_repos = get_org_stats(admin_orgs)
+
+    print("  Counting personal stars...")
+    personal_stars = get_personal_stars()
+
+    stars = personal_stars + org_stars
+    repos = personal_repos + org_repos
+
     print("  Counting all-time commits...")
     commits = get_all_time_commits(created_at)
 
-    print("  Counting stars (own + admin orgs)...")
-    stars = get_stars()
+    print("  Counting all-time contributed repos...")
+    contributed = get_all_time_contributed_repos(created_at)
 
     print(f"  stars={fmt(stars)}, commits={fmt(commits)}, prs={fmt(prs)}, "
           f"issues={fmt(issues)}, repos={repos}, contributed={contributed}")
