@@ -1,0 +1,44 @@
+<svg width="300" height="228" viewBox="0 0 300 228"
+  xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#fe428e"/>
+      <stop offset="100%" stop-color="#a9fef7"/>
+    </linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', Ubuntu, Sans-Serif; fill: #a9fef7; }
+      .title { font-size: 14px; font-weight: 700; fill: #fe428e; }
+      .label { font-size: 12px; fill: #a9fef7; }
+      .pct   { font-size: 11px; fill: #f8d847; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="300" height="228" rx="10" ry="10" fill="url(#border)"/>
+  <rect x="1.5" y="1.5" width="297" height="225" rx="9" ry="9" fill="#141321"/>
+
+  <text x="25" y="35" class="title">Most Used Languages</text>
+  
+  <text x="25"  y="60" class="label">HTML</text>
+  <rect x="25" y="66" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="66" width="110" height="8" rx="4" fill="#e34c26"/>
+  <text x="255" y="73" class="pct">50.0%</text>
+  <text x="25"  y="88" class="label">JavaScript</text>
+  <rect x="25" y="94" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="94" width="25" height="8" rx="4" fill="#f1e05a"/>
+  <text x="255" y="101" class="pct">11.6%</text>
+  <text x="25"  y="116" class="label">Java</text>
+  <rect x="25" y="122" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="122" width="24" height="8" rx="4" fill="#b07219"/>
+  <text x="255" y="129" class="pct">11.2%</text>
+  <text x="25"  y="144" class="label">CSS</text>
+  <rect x="25" y="150" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="150" width="23" height="8" rx="4" fill="#663399"/>
+  <text x="255" y="157" class="pct">10.6%</text>
+  <text x="25"  y="172" class="label">Rust</text>
+  <rect x="25" y="178" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="178" width="18" height="8" rx="4" fill="#dea584"/>
+  <text x="255" y="185" class="pct">8.3%</text>
+  <text x="25"  y="200" class="label">Python</text>
+  <rect x="25" y="206" width="220" height="8" rx="4" fill="#2d2b3d"/>
+  <rect x="25" y="206" width="18" height="8" rx="4" fill="#3572A5"/>
+  <text x="255" y="213" class="pct">8.3%</text>
+</svg>

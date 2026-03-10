@@ -1,0 +1,49 @@
+<svg width="450" height="195" viewBox="0 0 450 195"
+  xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#fe428e"/>
+      <stop offset="100%" stop-color="#a9fef7"/>
+    </linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', Ubuntu, Sans-Serif; fill: #a9fef7; }
+      .title { font-size: 14px; font-weight: 700; fill: #fe428e; }
+      .label { font-size: 11px; fill: #a9fef7; opacity: .85; }
+      .value { font-size: 20px; font-weight: 700; fill: #f8d847; }
+      .small  { font-size: 11px; fill: #a9fef7; }
+    </style>
+  </defs>
+
+  <!-- border gradient -->
+  <rect width="450" height="195" rx="10" ry="10" fill="url(#border)"/>
+  <!-- inner background -->
+  <rect x="1.5" y="1.5" width="447" height="192" rx="9" ry="9" fill="#141321"/>
+
+  <!-- title -->
+  <text x="25" y="35" class="title">Matrix53's GitHub Stats</text>
+
+  <!-- row 1 -->
+  <text x="25"  y="65"  class="label">⭐ Total Stars</text>
+  <text x="25"  y="88"  class="value">56</text>
+
+  <text x="175" y="65"  class="label">🔀 Total Commits</text>
+  <text x="175" y="88"  class="value">117</text>
+
+  <text x="320" y="65"  class="label">🔖 Total PRs</text>
+  <text x="320" y="88"  class="value">28</text>
+
+  <!-- row 2 -->
+  <text x="25"  y="120" class="label">🐛 Total Issues</text>
+  <text x="25"  y="143" class="value">18</text>
+
+  <text x="175" y="120" class="label">📦 Repos</text>
+  <text x="175" y="143" class="value">13</text>
+
+  <text x="320" y="120" class="label">🤝 Contributed to</text>
+  <text x="320" y="143" class="value">6</text>
+
+  <!-- footer line -->
+  <line x1="25" y1="162" x2="425" y2="162" stroke="#fe428e" stroke-opacity=".3" stroke-width="1"/>
+  <text x="25" y="178" class="small" opacity=".6">Updated by GitHub Actions</text>
+</svg>
