@@ -1,0 +1,29 @@
+name: GitHub Stats
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every day
+    - cron: "0 0 * * *"
+  # Allow manual trigger
+  workflow_dispatch:
+  # Also run on push to main to generate images immediately
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate GitHub Stats Images
+        uses: jstrieb/github-stats@master
+        with:
+          # GitHub Personal Access Token — set this in repo Settings > Secrets > ACCESS_TOKEN
+          access_token: ${{ secrets.ACCESS_TOKEN }}
+          # Optional: exclude specific repos from stats
+          # excluded_repos: "repo1,repo2"
+          # Optional: exclude specific langs from top languages
+          # excluded_langs: "HTML,CSS"

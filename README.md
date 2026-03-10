@@ -1,7 +1,15 @@
 ### Hi there 👋
-[![Matrix53's GitHub stats](https://github-readme-stats.vercel.app/api?username=Matrix53&count_private=true&show_icons=true&theme=radical)](https://github.com/anuraghazra/github-readme-stats)
 
-[![Top Langs](https://github-readme-stats.vercel.app/api/top-langs/?username=Matrix53&layout=compact&theme=radical&card_width=445&hide=CSS,HTML&langs_count=6)](https://github.com/anuraghazra/github-readme-stats)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg#gh-dark-mode-only">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg#gh-light-mode-only">
+  <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg" alt="GitHub Stats">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg#gh-dark-mode-only">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg#gh-light-mode-only">
+  <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg" alt="Top Languages">
+</picture>
 
 - 🔭 I’m currently studying at [BUAA](https://en.wikipedia.org/wiki/Beihang_University)
 - 🌱 I’m currently learning [ML](https://en.wikipedia.org/wiki/Machine_learning)
