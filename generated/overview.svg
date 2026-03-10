@@ -1,49 +1,92 @@
-<svg width="450" height="195" viewBox="0 0 450 195"
-  xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="495" height="200" viewBox="0 0 495 200"
+     xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="0%">
+    <!-- card border gradient -->
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#fe428e"/>
+      <stop offset="50%"  stop-color="#a9fef7"/>
+      <stop offset="100%" stop-color="#f8d847"/>
+    </linearGradient>
+    <!-- title text gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%"   stop-color="#fe428e"/>
       <stop offset="100%" stop-color="#a9fef7"/>
     </linearGradient>
+    <!-- soft glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
     <style>
-      text { font-family: 'Segoe UI', Ubuntu, Sans-Serif; fill: #a9fef7; }
-      .title { font-size: 14px; font-weight: 700; fill: #fe428e; }
-      .label { font-size: 11px; fill: #a9fef7; opacity: .85; }
-      .value { font-size: 20px; font-weight: 700; fill: #f8d847; }
-      .small  { font-size: 11px; fill: #a9fef7; }
+      .lbl { font: 11px 'Segoe UI',Ubuntu,sans-serif; fill:#a9fef7; opacity:.8; }
+      .val { font: bold 20px 'Segoe UI',Ubuntu,sans-serif; fill:#f8d847; }
     </style>
   </defs>
 
-  <!-- border gradient -->
-  <rect width="450" height="195" rx="10" ry="10" fill="url(#border)"/>
-  <!-- inner background -->
-  <rect x="1.5" y="1.5" width="447" height="192" rx="9" ry="9" fill="#141321"/>
+  <!-- gradient border -->
+  <rect width="495" height="200" rx="13" ry="13" fill="url(#grad)"/>
+  <!-- dark card body -->
+  <rect x="1.5" y="1.5" width="492" height="197" rx="12" ry="12" fill="#141321"/>
+  <!-- subtle top highlight -->
+  <rect x="1.5" y="1.5" width="492" height="40" rx="12" ry="12" fill="#ffffff" fill-opacity="0.03"/>
 
-  <!-- title -->
-  <text x="25" y="35" class="title">Matrix53's GitHub Stats</text>
+  <!-- title with glow -->
+  <text x="247" y="36"
+        text-anchor="middle"
+        font="bold 15px 'Segoe UI',Ubuntu,sans-serif"
+        fill="url(#titleGrad)"
+        filter="url(#glow)">Matrix53's GitHub Stats</text>
 
-  <!-- row 1 -->
-  <text x="25"  y="65"  class="label">⭐ Total Stars</text>
-  <text x="25"  y="88"  class="value">56</text>
+  <!-- title underline -->
+  <line x1="22" y1="46" x2="473" y2="46"
+        stroke="url(#grad)" stroke-opacity="0.25" stroke-width="1"/>
 
-  <text x="175" y="65"  class="label">🔀 Total Commits</text>
-  <text x="175" y="88"  class="value">117</text>
+  <!-- stat blocks -->
+  <g transform="translate(22,60)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">⭐</text>
+    <text x="36" y="11" class="lbl">Total Stars</text>
+    <text x="36" y="29" class="val">130</text>
+  </g>
+  <g transform="translate(187,60)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🔀</text>
+    <text x="36" y="11" class="lbl">Total Commits</text>
+    <text x="36" y="29" class="val">1.6k</text>
+  </g>
+  <g transform="translate(352,60)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🔖</text>
+    <text x="36" y="11" class="lbl">Total PRs</text>
+    <text x="36" y="29" class="val">28</text>
+  </g>
+  <g transform="translate(22,130)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🐛</text>
+    <text x="36" y="11" class="lbl">Total Issues</text>
+    <text x="36" y="29" class="val">18</text>
+  </g>
+  <g transform="translate(187,130)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">📦</text>
+    <text x="36" y="11" class="lbl">Total Repos</text>
+    <text x="36" y="29" class="val">13</text>
+  </g>
+  <g transform="translate(352,130)">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🤝</text>
+    <text x="36" y="11" class="lbl">Contributed to</text>
+    <text x="36" y="29" class="val">6</text>
+  </g>
 
-  <text x="320" y="65"  class="label">🔖 Total PRs</text>
-  <text x="320" y="88"  class="value">28</text>
-
-  <!-- row 2 -->
-  <text x="25"  y="120" class="label">🐛 Total Issues</text>
-  <text x="25"  y="143" class="value">18</text>
-
-  <text x="175" y="120" class="label">📦 Repos</text>
-  <text x="175" y="143" class="value">13</text>
-
-  <text x="320" y="120" class="label">🤝 Contributed to</text>
-  <text x="320" y="143" class="value">6</text>
-
-  <!-- footer line -->
-  <line x1="25" y1="162" x2="425" y2="162" stroke="#fe428e" stroke-opacity=".3" stroke-width="1"/>
-  <text x="25" y="178" class="small" opacity=".6">Updated by GitHub Actions</text>
+  <!-- footer -->
+  <line x1="22" y1="178" x2="473" y2="178"
+        stroke="#a9fef7" stroke-opacity="0.1" stroke-width="1"/>
+  <text x="247" y="192"
+        text-anchor="middle"
+        font="10px 'Segoe UI',Ubuntu,sans-serif"
+        fill="#a9fef7" opacity="0.35">All-time stats · Updated by GitHub Actions</text>
 </svg>
