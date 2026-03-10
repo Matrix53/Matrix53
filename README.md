@@ -2,7 +2,7 @@
 
 # Hi, I'm Matrix53 👋
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&pause=1000&color=FE428E&center=true&vCenter=true&width=435&lines=BUAA+Student+%7C+Video+Generation;BUAA+%7C+SenseTime+%7C+Baidu;Video+Generation+%7C+Diffusion+Model)](https://git.io/typing-svg)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&pause=1000&color=FE428E&center=true&vCenter=true&width=435&lines=Always+learning%2C+always+building+%F0%9F%9A%80;BUAA+%7C+SenseTime+%7C+Baidu;Video+Generation+%7C+Diffusion+Model)](https://git.io/typing-svg)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg#gh-dark-mode-only">
