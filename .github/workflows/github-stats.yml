@@ -4,9 +4,7 @@ on:
   schedule:
     # Runs at 00:00 UTC every day
     - cron: "0 0 * * *"
-  # Allow manual trigger
   workflow_dispatch:
-  # Also run on push to main to generate images immediately
   push:
     branches:
       - main
@@ -14,16 +12,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate GitHub Stats Images
-        uses: jstrieb/github-stats@master
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          # GitHub Personal Access Token — set this in repo Settings > Secrets > ACCESS_TOKEN
-          access_token: ${{ secrets.ACCESS_TOKEN }}
-          # Optional: exclude specific repos from stats
-          # excluded_repos: "repo1,repo2"
-          # Optional: exclude specific langs from top languages
-          # excluded_langs: "HTML,CSS"
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Generate stats SVGs
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          USERNAME: Matrix53
+        run: python3 generate_stats.py
+
+      - name: Commit and push generated images
+        run: |
+          git config --global user.name  "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add generated/
+          git diff --cached --quiet && echo "No changes" || \
+            git commit -m "chore: update GitHub stats [skip ci]" && git push
