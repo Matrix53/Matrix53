@@ -1,14 +1,17 @@
 """
-Generate GitHub stats SVG cards for Matrix53's profile README.
-Outputs:
-  generated/overview.svg  — overall GitHub statistics
-  generated/languages.svg — top programming languages
+Generate GitHub stats SVG card for Matrix53's profile README.
+Outputs: generated/overview.svg
+
+Features:
+- All-time commits (loops year-by-year since account creation)
+- Stars from own repos + org repos where viewer is owner/admin
+- Beautiful radical-themed card with gradient border & glow
 """
 
 import os
 import requests
-from collections import defaultdict
 from pathlib import Path
+from datetime import datetime, timezone
 
 TOKEN = os.environ.get("ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
 USERNAME = os.environ.get("USERNAME", "Matrix53")
@@ -16,42 +19,11 @@ USERNAME = os.environ.get("USERNAME", "Matrix53")
 GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
-STATS_QUERY = """
-query($login: String!) {
-  user(login: $login) {
-    name
-    contributionsCollection {
-      totalCommitContributions
-      restrictedContributionsCount
-    }
-    pullRequests(first: 1) { totalCount }
-    openIssues:   issues(states: OPEN)   { totalCount }
-    closedIssues: issues(states: CLOSED) { totalCount }
-    repositoriesContributedTo(
-      first: 1
-      includeUserRepositories: false
-    ) { totalCount }
-    repositories(ownerAffiliations: OWNER, isFork: false, first: 100) {
-      totalCount
-      nodes {
-        stargazerCount
-        languages(first: 10, orderBy: {field: SIZE, direction: DESC}) {
-          edges {
-            size
-            node { name color }
-          }
-        }
-      }
-    }
-  }
-}
-"""
 
-
-def run_query(query, variables):
+def run_query(query, variables=None):
     resp = requests.post(
         GRAPHQL_URL,
-        json={"query": query, "variables": variables},
+        json={"query": query, "variables": variables or {}},
         headers=HEADERS,
         timeout=30,
     )
@@ -62,155 +34,267 @@ def run_query(query, variables):
     return result["data"]
 
 
+# ── Queries ───────────────────────────────────────────────────────────────────
+
+USER_BASE_QUERY = """
+query($login: String!) {
+  user(login: $login) {
+    createdAt
+    pullRequests(first: 1) { totalCount }
+    openIssues:   issues(states: OPEN)   { totalCount }
+    closedIssues: issues(states: CLOSED) { totalCount }
+    repositoriesContributedTo(
+      first: 1
+      includeUserRepositories: false
+    ) { totalCount }
+    repositories(ownerAffiliations: [OWNER], isFork: false, first: 1) {
+      totalCount
+    }
+  }
+}
+"""
+
+COMMITS_YEAR_QUERY = """
+query($login: String!, $from: DateTime!, $to: DateTime!) {
+  user(login: $login) {
+    contributionsCollection(from: $from, to: $to) {
+      totalCommitContributions
+      restrictedContributionsCount
+    }
+  }
+}
+"""
+
+OWN_REPOS_STARS_QUERY = """
+query($login: String!, $after: String) {
+  user(login: $login) {
+    repositories(ownerAffiliations: [OWNER], first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { stargazerCount }
+    }
+  }
+}
+"""
+
+ORGS_QUERY = """
+{
+  viewer {
+    organizations(first: 20) {
+      nodes {
+        login
+        viewerCanAdminister
+      }
+    }
+  }
+}
+"""
+
+ORG_REPOS_STARS_QUERY = """
+query($org: String!, $after: String) {
+  organization(login: $org) {
+    repositories(first: 100, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes { stargazerCount }
+    }
+  }
+}
+"""
+
+
+# ── Data fetching ─────────────────────────────────────────────────────────────
+
+def get_all_time_commits(created_at: str) -> int:
+    """Sum commits year-by-year from account creation to today."""
+    created = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+    now = datetime.now(timezone.utc)
+    total = 0
+    year = created.year
+    while year <= now.year:
+        from_dt = f"{year}-01-01T00:00:00Z"
+        to_dt = (
+            now.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if year == now.year
+            else f"{year}-12-31T23:59:59Z"
+        )
+        data = run_query(COMMITS_YEAR_QUERY, {
+            "login": USERNAME, "from": from_dt, "to": to_dt
+        })
+        cc = data["user"]["contributionsCollection"]
+        year_total = cc["totalCommitContributions"] + cc["restrictedContributionsCount"]
+        print(f"    {year}: {year_total} commits")
+        total += year_total
+        year += 1
+    return total
+
+
+def get_stars() -> int:
+    """Stars from own repos + org repos where viewer is owner/admin."""
+    stars = 0
+
+    # Personal repos (paginated)
+    after = None
+    while True:
+        data = run_query(OWN_REPOS_STARS_QUERY, {"login": USERNAME, "after": after})
+        repos = data["user"]["repositories"]
+        for r in repos["nodes"]:
+            stars += r["stargazerCount"]
+        if not repos["pageInfo"]["hasNextPage"]:
+            break
+        after = repos["pageInfo"]["endCursor"]
+
+    # Org repos where viewer can administer
+    orgs_data = run_query(ORGS_QUERY)
+    admin_orgs = [
+        org["login"]
+        for org in orgs_data["viewer"]["organizations"]["nodes"]
+        if org["viewerCanAdminister"]
+    ]
+    print(f"  Admin orgs: {admin_orgs or 'none'}")
+
+    for org_login in admin_orgs:
+        after = None
+        while True:
+            data = run_query(ORG_REPOS_STARS_QUERY, {"org": org_login, "after": after})
+            org_repos = data["organization"]["repositories"]
+            for r in org_repos["nodes"]:
+                stars += r["stargazerCount"]
+            if not org_repos["pageInfo"]["hasNextPage"]:
+                break
+            after = org_repos["pageInfo"]["endCursor"]
+
+    return stars
+
+
+# ── SVG ───────────────────────────────────────────────────────────────────────
+
 def fmt(n: int) -> str:
     if n >= 1_000_000:
-        return f"{n/1_000_000:.1f}M"
+        return f"{n / 1_000_000:.1f}M"
     if n >= 1_000:
-        return f"{n/1_000:.1f}k"
+        return f"{n / 1_000:.1f}k"
     return str(n)
 
 
-# ── SVG helpers ──────────────────────────────────────────────────────────────
+def esc(s) -> str:
+    return (str(s)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;"))
 
-def esc(s: str) -> str:
-    return (s.replace("&", "&amp;")
-             .replace("<", "&lt;")
-             .replace(">", "&gt;")
-             .replace('"', "&quot;"))
+
+def stat_block(x, y, icon, label, value):
+    """Render one stat: icon circle + label + big value."""
+    return f"""\
+  <g transform="translate({x},{y})">
+    <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
+    <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">{icon}</text>
+    <text x="36" y="11" class="lbl">{esc(label)}</text>
+    <text x="36" y="29" class="val">{esc(value)}</text>
+  </g>"""
 
 
 def overview_svg(stars, commits, prs, issues, repos, contributed) -> str:
-    W, H = 450, 195
+    W, H = 495, 200
+
+    blocks = [
+        (22,  60, "⭐", "Total Stars",     fmt(stars)),
+        (187, 60, "🔀", "Total Commits",   fmt(commits)),
+        (352, 60, "🔖", "Total PRs",       fmt(prs)),
+        (22, 130, "🐛", "Total Issues",    fmt(issues)),
+        (187,130, "📦", "Total Repos",     fmt(repos)),
+        (352,130, "🤝", "Contributed to",  fmt(contributed)),
+    ]
+
+    blocks_svg = "\n".join(stat_block(*b) for b in blocks)
+
     return f"""<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}"
-  xmlns="http://www.w3.org/2000/svg"
-  xmlns:xlink="http://www.w3.org/1999/xlink">
+     xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="0%">
+    <!-- card border gradient -->
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%"   stop-color="#fe428e"/>
+      <stop offset="50%"  stop-color="#a9fef7"/>
+      <stop offset="100%" stop-color="#f8d847"/>
+    </linearGradient>
+    <!-- title text gradient -->
+    <linearGradient id="titleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%"   stop-color="#fe428e"/>
       <stop offset="100%" stop-color="#a9fef7"/>
     </linearGradient>
+    <!-- soft glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
     <style>
-      text {{ font-family: 'Segoe UI', Ubuntu, Sans-Serif; fill: #a9fef7; }}
-      .title {{ font-size: 14px; font-weight: 700; fill: #fe428e; }}
-      .label {{ font-size: 11px; fill: #a9fef7; opacity: .85; }}
-      .value {{ font-size: 20px; font-weight: 700; fill: #f8d847; }}
-      .small  {{ font-size: 11px; fill: #a9fef7; }}
+      .lbl {{ font: 11px 'Segoe UI',Ubuntu,sans-serif; fill:#a9fef7; opacity:.8; }}
+      .val {{ font: bold 20px 'Segoe UI',Ubuntu,sans-serif; fill:#f8d847; }}
     </style>
   </defs>
 
-  <!-- border gradient -->
-  <rect width="{W}" height="{H}" rx="10" ry="10" fill="url(#border)"/>
-  <!-- inner background -->
-  <rect x="1.5" y="1.5" width="{W-3}" height="{H-3}" rx="9" ry="9" fill="#141321"/>
+  <!-- gradient border -->
+  <rect width="{W}" height="{H}" rx="13" ry="13" fill="url(#grad)"/>
+  <!-- dark card body -->
+  <rect x="1.5" y="1.5" width="{W-3}" height="{H-3}" rx="12" ry="12" fill="#141321"/>
+  <!-- subtle top highlight -->
+  <rect x="1.5" y="1.5" width="{W-3}" height="40" rx="12" ry="12" fill="#ffffff" fill-opacity="0.03"/>
 
-  <!-- title -->
-  <text x="25" y="35" class="title">{esc(USERNAME)}'s GitHub Stats</text>
+  <!-- title with glow -->
+  <text x="{W//2}" y="36"
+        text-anchor="middle"
+        font="bold 15px 'Segoe UI',Ubuntu,sans-serif"
+        fill="url(#titleGrad)"
+        filter="url(#glow)">{esc(USERNAME)}'s GitHub Stats</text>
 
-  <!-- row 1 -->
-  <text x="25"  y="65"  class="label">⭐ Total Stars</text>
-  <text x="25"  y="88"  class="value">{esc(fmt(stars))}</text>
+  <!-- title underline -->
+  <line x1="22" y1="46" x2="{W-22}" y2="46"
+        stroke="url(#grad)" stroke-opacity="0.25" stroke-width="1"/>
 
-  <text x="175" y="65"  class="label">🔀 Total Commits</text>
-  <text x="175" y="88"  class="value">{esc(fmt(commits))}</text>
+  <!-- stat blocks -->
+{blocks_svg}
 
-  <text x="320" y="65"  class="label">🔖 Total PRs</text>
-  <text x="320" y="88"  class="value">{esc(fmt(prs))}</text>
-
-  <!-- row 2 -->
-  <text x="25"  y="120" class="label">🐛 Total Issues</text>
-  <text x="25"  y="143" class="value">{esc(fmt(issues))}</text>
-
-  <text x="175" y="120" class="label">📦 Repos</text>
-  <text x="175" y="143" class="value">{esc(fmt(repos))}</text>
-
-  <text x="320" y="120" class="label">🤝 Contributed to</text>
-  <text x="320" y="143" class="value">{esc(fmt(contributed))}</text>
-
-  <!-- footer line -->
-  <line x1="25" y1="162" x2="{W-25}" y2="162" stroke="#fe428e" stroke-opacity=".3" stroke-width="1"/>
-  <text x="25" y="178" class="small" opacity=".6">Updated by GitHub Actions</text>
+  <!-- footer -->
+  <line x1="22" y1="{H-22}" x2="{W-22}" y2="{H-22}"
+        stroke="#a9fef7" stroke-opacity="0.1" stroke-width="1"/>
+  <text x="{W//2}" y="{H-8}"
+        text-anchor="middle"
+        font="10px 'Segoe UI',Ubuntu,sans-serif"
+        fill="#a9fef7" opacity="0.35">All-time stats · Updated by GitHub Actions</text>
 </svg>"""
 
 
-def languages_svg(top_langs: list[tuple[str, int, str]]) -> str:
-    """top_langs: [(name, size, color), ...]"""
-    W, H = 300, 30 + 28 * len(top_langs) + 30
-    total = sum(s for _, s, _ in top_langs)
-
-    bars = ""
-    for i, (name, size, color) in enumerate(top_langs):
-        pct = size / total
-        y = 60 + i * 28
-        bar_w = int(pct * 220)
-        bars += f"""
-  <text x="25"  y="{y}" class="label">{esc(name)}</text>
-  <rect x="25" y="{y+6}" width="220" height="8" rx="4" fill="#2d2b3d"/>
-  <rect x="25" y="{y+6}" width="{bar_w}" height="8" rx="4" fill="{esc(color or '#58a6ff')}"/>
-  <text x="255" y="{y+13}" class="pct">{pct*100:.1f}%</text>"""
-
-    return f"""<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}"
-  xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#fe428e"/>
-      <stop offset="100%" stop-color="#a9fef7"/>
-    </linearGradient>
-    <style>
-      text {{ font-family: 'Segoe UI', Ubuntu, Sans-Serif; fill: #a9fef7; }}
-      .title {{ font-size: 14px; font-weight: 700; fill: #fe428e; }}
-      .label {{ font-size: 12px; fill: #a9fef7; }}
-      .pct   {{ font-size: 11px; fill: #f8d847; font-weight: 700; }}
-    </style>
-  </defs>
-  <rect width="{W}" height="{H}" rx="10" ry="10" fill="url(#border)"/>
-  <rect x="1.5" y="1.5" width="{W-3}" height="{H-3}" rx="9" ry="9" fill="#141321"/>
-
-  <text x="25" y="35" class="title">Most Used Languages</text>
-  {bars}
-</svg>"""
-
-
-# ── Main ─────────────────────────────────────────────────────────────────────
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
     print(f"Fetching stats for {USERNAME}...")
-    data = run_query(STATS_QUERY, {"login": USERNAME})["user"]
 
-    stars = sum(r["stargazerCount"] for r in data["repositories"]["nodes"])
-    commits = (data["contributionsCollection"]["totalCommitContributions"]
-               + data["contributionsCollection"]["restrictedContributionsCount"])
-    prs = data["pullRequests"]["totalCount"]
-    issues = (data["openIssues"]["totalCount"]
-              + data["closedIssues"]["totalCount"])
-    repos = data["repositories"]["totalCount"]
-    contributed = data["repositoriesContributedTo"]["totalCount"]
+    base = run_query(USER_BASE_QUERY, {"login": USERNAME})["user"]
+    created_at = base["createdAt"]
+    prs = base["pullRequests"]["totalCount"]
+    issues = base["openIssues"]["totalCount"] + base["closedIssues"]["totalCount"]
+    repos = base["repositories"]["totalCount"]
+    contributed = base["repositoriesContributedTo"]["totalCount"]
 
-    # Aggregate language sizes across all repos
-    lang_sizes: dict[str, int] = defaultdict(int)
-    lang_colors: dict[str, str] = {}
-    for repo in data["repositories"]["nodes"]:
-        for edge in repo["languages"]["edges"]:
-            node = edge["node"]
-            lang_sizes[node["name"]] += edge["size"]
-            lang_colors[node["name"]] = node["color"] or "#58a6ff"
+    print(f"  Account created: {created_at}")
+    print("  Counting all-time commits...")
+    commits = get_all_time_commits(created_at)
 
-    top_langs = sorted(lang_sizes.items(), key=lambda x: x[1], reverse=True)[:6]
-    top_langs_colored = [(name, size, lang_colors[name]) for name, size in top_langs]
+    print("  Counting stars (own + admin orgs)...")
+    stars = get_stars()
 
-    # Write output
+    print(f"  stars={fmt(stars)}, commits={fmt(commits)}, prs={fmt(prs)}, "
+          f"issues={fmt(issues)}, repos={repos}, contributed={contributed}")
+
     out = Path("generated")
     out.mkdir(exist_ok=True)
-
     (out / "overview.svg").write_text(
         overview_svg(stars, commits, prs, issues, repos, contributed)
     )
-    print(f"  overview.svg: stars={fmt(stars)}, commits={fmt(commits)}, "
-          f"prs={fmt(prs)}, issues={fmt(issues)}")
-
-    (out / "languages.svg").write_text(languages_svg(top_langs_colored))
-    print(f"  languages.svg: {[n for n,_,_ in top_langs_colored]}")
-
-    print("Done.")
+    print("Done → generated/overview.svg")
 
 
 if __name__ == "__main__":

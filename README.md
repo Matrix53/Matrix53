@@ -5,11 +5,6 @@
   <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg#gh-light-mode-only">
   <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/overview.svg" alt="GitHub Stats">
 </picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg#gh-dark-mode-only">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg#gh-light-mode-only">
-  <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/languages.svg" alt="Top Languages">
-</picture>
 
 - 🔭 I’m currently studying at [BUAA](https://en.wikipedia.org/wiki/Beihang_University)
 - 🌱 I’m currently learning [ML](https://en.wikipedia.org/wiki/Machine_learning)
