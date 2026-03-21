@@ -49,7 +49,7 @@
     <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
     <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">⭐</text>
     <text x="36" y="11" class="lbl">Total Stars</text>
-    <text x="36" y="29" class="val">132</text>
+    <text x="36" y="29" class="val">136</text>
   </g>
   <g transform="translate(187,60)">
     <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
