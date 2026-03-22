@@ -1,15 +1,17 @@
 """
 Generate GitHub stats SVG card and README marquee assets for Matrix53's profile.
-Outputs: generated/overview.svg and generated/marquee-*.svg
+Outputs: generated/overview.svg and generated/marquee-*.gif
 """
 
-import base64
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
+from typing import Dict, Optional
 
 import requests
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 TOKEN = os.environ.get("ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
 USERNAME = os.environ.get("USERNAME", "Matrix53")
@@ -18,17 +20,25 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
-MARQUEE_WIDTH = 132
-MARQUEE_TOP_HEIGHT = 54
-MARQUEE_BOTTOM_HEIGHT = 200
-MARQUEE_CHIP_WIDTH = 120
+MARQUEE_GIF_WIDTH = 148
+MARQUEE_GIF_HEIGHT = 276
+MARQUEE_FRAME_COUNT = 72
+MARQUEE_FRAME_MS = int(MARQUEE_DURATION * 1000 / MARQUEE_FRAME_COUNT)
+MARQUEE_MAX_ACTIVE = 2
+MARQUEE_CHIP_WIDTH = 136
 MARQUEE_CHIP_HEIGHT = 22
-MARQUEE_ICON_SIZE = 14
+MARQUEE_ICON_SIZE = 15
 MARQUEE_PADDING_X = 6
-MARQUEE_LABEL_WIDTH = 84
-MARQUEE_FADE_IN_END = 0.04
-MARQUEE_HOLD_END = 0.10
-MARQUEE_FADE_OUT_END = 0.15
+MARQUEE_LABEL_WIDTH = 100
+MARQUEE_START_X = -52
+MARQUEE_END_X = 30
+MARQUEE_VISIBLE_FRAMES = 10
+MARQUEE_FADE_IN_FRAMES = 2
+MARQUEE_FADE_OUT_FRAMES = 2
+MARQUEE_TEXT_COLOR = "#1f2937"
+MARQUEE_STROKE_COLOR = "#d7dbe8"
+MARQUEE_RING_FILL = "#f5f7fd"
+MARQUEE_RING_STROKE = "#dbe3f1"
 
 TECH_STACK_ITEMS = [
     "PyTorch",
@@ -60,6 +70,8 @@ PROJECT_ITEMS = [
     "Hazelnut React",
 ]
 
+MARQUEE_INTERVAL_FRAMES = MARQUEE_FRAME_COUNT // len(TECH_STACK_ITEMS)
+
 TECH_ICON_FILES = {
     "PyTorch": "assets/readme/tech/pytorch.svg",
     "CUDA": "assets/readme/tech/cuda.svg",
@@ -73,6 +85,21 @@ TECH_ICON_FILES = {
     "Vue 3": "assets/readme/tech/vue3.svg",
     "MPI": "assets/readme/tech/mpi.png",
     "OpenMP": "assets/readme/tech/openmp.svg",
+}
+
+TECH_ICON_RASTER_FILES = {
+    "PyTorch": "assets/readme/tech-png/pytorch.png",
+    "CUDA": "assets/readme/tech-png/cuda.png",
+    "Diffusers": "assets/readme/tech-png/diffusers.png",
+    "Transformers": "assets/readme/tech-png/transformers.png",
+    "OpenCV": "assets/readme/tech-png/opencv.png",
+    "Python": "assets/readme/tech-png/python.png",
+    "Rust": "assets/readme/tech-png/rust.png",
+    "Go": "assets/readme/tech-png/go.png",
+    "Electron": "assets/readme/tech-png/electron.png",
+    "Vue 3": "assets/readme/tech-png/vue3.png",
+    "MPI": "assets/readme/tech-png/mpi.png",
+    "OpenMP": "assets/readme/tech-png/openmp.png",
 }
 
 TECH_ICON_TINTS = {
@@ -102,24 +129,19 @@ PROJECT_EMOJI_FILES = {
     "Calendar": "assets/readme/emoji/calendar.svg",
     "Hazelnut React": "assets/readme/emoji/hazelnut-react.svg",
 }
-
-TECH_TOP_ITEMS = TECH_STACK_ITEMS[:6]
-TECH_BOTTOM_ITEMS = TECH_STACK_ITEMS[6:]
-PROJECT_TOP_ITEMS = PROJECT_ITEMS[:6]
-PROJECT_BOTTOM_ITEMS = PROJECT_ITEMS[6:]
-
-MARQUEE_PHASE_OFFSETS = {
-    "tech-top": 0.0,
-    "project-top": -0.75,
-    "tech-bottom": -1.5,
-    "project-bottom": -2.25,
-}
-
-MARQUEE_PATHS = {
-    "tech-top": [(6, 16), (14, 8), (10, 20), (18, 10), (8, 18), (16, 12)],
-    "project-top": [(12, 6), (8, 18), (16, 10), (6, 20), (18, 8), (10, 16)],
-    "tech-bottom": [(20, 54), (74, 28), (116, 88), (52, 134), (132, 104), (88, 156)],
-    "project-bottom": [(34, 18), (92, 60), (142, 108), (66, 146), (122, 46), (26, 126)],
+PROJECT_EMOJI_RASTER_FILES = {
+    "ELBO-T2IAlign": "assets/readme/emoji-png/elbo.png",
+    "DiffSegmenter": "assets/readme/emoji-png/diffsegmenter.png",
+    "PhoeniX": "assets/readme/emoji-png/phoenix.png",
+    "PhoeniX Server": "assets/readme/emoji-png/phoenix-server.png",
+    "Parallel Programming": "assets/readme/emoji-png/parallel.png",
+    "Calcium": "assets/readme/emoji-png/calcium.png",
+    "Mario": "assets/readme/emoji-png/mario.png",
+    "Match Maltese": "assets/readme/emoji-png/match-maltese.png",
+    "Algo": "assets/readme/emoji-png/algo.png",
+    "Gobang": "assets/readme/emoji-png/gobang.png",
+    "Calendar": "assets/readme/emoji-png/calendar.png",
+    "Hazelnut React": "assets/readme/emoji-png/hazelnut-react.png",
 }
 
 
@@ -356,182 +378,199 @@ def esc(s) -> str:
             .replace('"', "&quot;"))
 
 
+FONT_REGULAR_PATH = "/System/Library/Fonts/Supplemental/Arial.ttf"
+FONT_BOLD_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+
+LEFT_START_YS = [18, 174, 44, 202, 78, 146, 26, 188, 96, 226, 60, 126]
+LEFT_END_YS = [40, 140, 16, 214, 104, 118, 54, 160, 72, 238, 30, 100]
+RIGHT_START_YS = [32, 190, 62, 218, 86, 150, 20, 176, 110, 234, 48, 132]
+RIGHT_END_YS = [14, 162, 92, 194, 58, 124, 44, 210, 82, 246, 26, 108]
+
+
+@dataclass(frozen=True)
+class MarqueeMotion:
+    label: str
+    asset_path: str
+    start_frame: int
+    start_y: int
+    end_y: int
+    tint: Optional[str] = None
+
+
+def lane_items(lane: str) -> list[str]:
+    if lane == "left":
+        return TECH_STACK_ITEMS
+    if lane == "right":
+        return PROJECT_ITEMS
+    raise ValueError(f"Unsupported lane: {lane}")
+
+
 @lru_cache(maxsize=None)
-def asset_data_uri(asset_path: str, tint: str = "") -> str:
-    path = Path(asset_path)
-    mime_type = "image/png" if path.suffix.lower() == ".png" else "image/svg+xml"
-    data = path.read_bytes()
-    if tint and path.suffix.lower() == ".svg":
-        svg_text = data.decode("utf-8")
-        if ' fill="' not in svg_text:
-            svg_text = svg_text.replace("<svg ", f'<svg fill="{tint}" ', 1)
-        data = svg_text.encode("utf-8")
-    encoded = base64.b64encode(data).decode("ascii")
-    return f"data:{mime_type};base64,{encoded}"
+def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
+    path = FONT_BOLD_PATH if bold else FONT_REGULAR_PATH
+    return ImageFont.truetype(path, size=size)
 
 
-def marquee_style() -> str:
-    return """\
-    <style>
-      .lane-shell { fill: transparent; }
-      .lane-chip rect.chip-bg {
-        fill: #ffffff;
-        fill-opacity: 0.94;
-        stroke: #d7dbe8;
-        stroke-width: 1;
-      }
-      .lane-chip circle.icon-ring {
-        fill: #f5f7fd;
-        stroke: #dbe3f1;
-        stroke-width: 0.9;
-      }
-      .lane-chip image.logo-icon,
-      .lane-chip image.emoji-icon {
-        overflow: visible;
-      }
-      .lane-chip text.label {
-        font: 600 8.6px 'Segoe UI', Ubuntu, sans-serif;
-        fill: #1f2937;
-        dominant-baseline: middle;
-      }
-    </style>"""
+@lru_cache(maxsize=None)
+def load_icon_image(path: str, size: int, tint: str = "") -> Image.Image:
+    icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+    if tint:
+        colored = Image.new("RGBA", icon.size, ImageColor.getrgb(tint) + (255,))
+        colored.putalpha(icon.getchannel("A"))
+        return colored
+    return icon
 
 
-def tech_chip(label: str) -> str:
-    icon_href = asset_data_uri(TECH_ICON_FILES[label], TECH_ICON_TINTS.get(label, ""))
-    return f"""\
-    <g class="chip-content">
-      <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
-      <circle class="icon-ring" cx="14" cy="11" r="8" />
-      <image class="logo-icon" href="{icon_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
-      <text class="label" x="28" y="11.2" textLength="{MARQUEE_LABEL_WIDTH}" lengthAdjust="spacingAndGlyphs">{esc(label)}</text>
-    </g>"""
+def fit_label_font(text: str) -> ImageFont.FreeTypeFont:
+    for size in (10, 9, 8, 7):
+        font = load_font(size, bold=True)
+        if font.getbbox(text)[2] <= MARQUEE_LABEL_WIDTH:
+            return font
+    return load_font(7, bold=True)
 
 
-def project_chip(label: str) -> str:
-    emoji_href = asset_data_uri(PROJECT_EMOJI_FILES[label])
-    return f"""\
-    <g class="chip-content">
-      <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
-      <circle class="icon-ring" cx="14" cy="11" r="8" />
-      <image class="emoji-icon" href="{emoji_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
-      <text class="label" x="28" y="11.2" textLength="{MARQUEE_LABEL_WIDTH}" lengthAdjust="spacingAndGlyphs">{esc(label)}</text>
-    </g>"""
+@lru_cache(maxsize=None)
+def build_chip_image(lane: str, label: str) -> Image.Image:
+    chip = Image.new("RGBA", (MARQUEE_CHIP_WIDTH, MARQUEE_CHIP_HEIGHT), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(chip)
+    draw.rounded_rectangle(
+        (0, 0, MARQUEE_CHIP_WIDTH - 1, MARQUEE_CHIP_HEIGHT - 1),
+        radius=11,
+        fill=(255, 255, 255, 240),
+        outline=ImageColor.getrgb(MARQUEE_STROKE_COLOR),
+        width=1,
+    )
+    draw.ellipse(
+        (6, 3, 6 + 16, 3 + 16),
+        fill=ImageColor.getrgb(MARQUEE_RING_FILL),
+        outline=ImageColor.getrgb(MARQUEE_RING_STROKE),
+        width=1,
+    )
 
-
-def marquee_path_pair(lane_key: str, index: int) -> tuple[int, int]:
-    path_pairs = MARQUEE_PATHS[lane_key]
-    return path_pairs[index % len(path_pairs)]
-
-
-def marquee_item_group(
-    *,
-    index: int,
-    item_count: int,
-    item_svg: str,
-    phase_offset: float,
-    lane_key: str,
-) -> str:
-    start_x = -(MARQUEE_CHIP_WIDTH + 12)
-    end_x = MARQUEE_WIDTH - MARQUEE_CHIP_WIDTH - MARQUEE_PADDING_X
-    start_y, end_y = marquee_path_pair(lane_key, index)
-    interval = MARQUEE_DURATION / item_count
-    begin = phase_offset - (index * interval)
-    duration = f"{MARQUEE_DURATION}s"
-    return f"""\
-  <g class="lane-chip" data-index="{index}" opacity="0">
-    <animateTransform attributeName="transform"
-                      type="translate"
-                      values="{start_x} {start_y}; {end_x} {end_y}"
-                      dur="{duration}"
-                      begin="{begin}s"
-                      repeatCount="indefinite" />
-    <animate attributeName="opacity"
-             values="0;1;1;0;0"
-             keyTimes="0;{MARQUEE_FADE_IN_END};{MARQUEE_HOLD_END};{MARQUEE_FADE_OUT_END};1"
-             dur="{duration}"
-             begin="{begin}s"
-             repeatCount="indefinite" />
-    {item_svg}
-  </g>"""
-
-
-def marquee_svg(
-    items: list[str], *, kind: str, height: int, label: str, lane_key: str
-) -> str:
-    if kind not in {"tech", "project"}:
-        raise ValueError(f"Unsupported marquee kind: {kind}")
-
-    item_builder = tech_chip if kind == "tech" else project_chip
-    phase_offset = MARQUEE_PHASE_OFFSETS[lane_key]
-    groups = [
-        marquee_item_group(
-            index=index,
-            item_count=len(items),
-            item_svg=item_builder(item),
-            phase_offset=phase_offset,
-            lane_key=lane_key,
+    if lane == "left":
+        icon = load_icon_image(
+            TECH_ICON_RASTER_FILES[label],
+            MARQUEE_ICON_SIZE,
+            TECH_ICON_TINTS.get(label, ""),
         )
-        for index, item in enumerate(items)
-    ]
-    groups_svg = "\n".join(groups)
-    clip_id = label.lower().replace(" ", "-")
+    else:
+        icon = load_icon_image(PROJECT_EMOJI_RASTER_FILES[label], MARQUEE_ICON_SIZE)
+    chip.alpha_composite(icon, (7, 4))
 
-    return f"""<svg width="{MARQUEE_WIDTH}" height="{height}"
-     viewBox="0 0 {MARQUEE_WIDTH} {height}"
-     xmlns="http://www.w3.org/2000/svg" role="img"
-     aria-label="{label}">
-  <defs>
-{marquee_style()}
-    <clipPath id="lane-clip-{clip_id}">
-      <rect width="{MARQUEE_WIDTH}" height="{height}" rx="12" ry="12" />
-    </clipPath>
-  </defs>
-
-  <g class="lane-shell" data-slot="0" clip-path="url(#lane-clip-{clip_id})">
-{groups_svg}
-  </g>
-</svg>"""
+    font = fit_label_font(label)
+    draw.text(
+        (28, 5),
+        label,
+        font=font,
+        fill=ImageColor.getrgb(MARQUEE_TEXT_COLOR),
+    )
+    return chip
 
 
-def marquee_left_top_svg() -> str:
-    return marquee_svg(
-        TECH_TOP_ITEMS,
-        kind="tech",
-        height=MARQUEE_TOP_HEIGHT,
-        label="Tech stack marquee top",
-        lane_key="tech-top",
+def ease_in_out(progress: float) -> float:
+    return progress * progress * (3 - 2 * progress)
+
+
+def motion_alpha(delta_frame: int) -> float:
+    if delta_frame < MARQUEE_FADE_IN_FRAMES:
+        return (delta_frame + 1) / MARQUEE_FADE_IN_FRAMES
+    fade_start = MARQUEE_VISIBLE_FRAMES - MARQUEE_FADE_OUT_FRAMES
+    if delta_frame >= fade_start:
+        remaining = MARQUEE_VISIBLE_FRAMES - delta_frame - 1
+        return max(0.0, remaining / MARQUEE_FADE_OUT_FRAMES)
+    return 1.0
+
+
+def build_marquee_motions(lane: str) -> list[MarqueeMotion]:
+    items = lane_items(lane)
+    start_ys = LEFT_START_YS if lane == "left" else RIGHT_START_YS
+    end_ys = LEFT_END_YS if lane == "left" else RIGHT_END_YS
+    raster_files = TECH_ICON_RASTER_FILES if lane == "left" else PROJECT_EMOJI_RASTER_FILES
+    tints = TECH_ICON_TINTS if lane == "left" else {}
+    lane_phase = 0 if lane == "left" else MARQUEE_INTERVAL_FRAMES // 2
+
+    motions = []
+    for index, label in enumerate(items):
+        motions.append(
+            MarqueeMotion(
+                label=label,
+                asset_path=raster_files[label],
+                start_frame=(lane_phase + index * MARQUEE_INTERVAL_FRAMES)
+                % MARQUEE_FRAME_COUNT,
+                start_y=start_ys[index],
+                end_y=end_ys[index],
+                tint=tints.get(label),
+            )
+        )
+    return motions
+
+
+def motion_state_for_frame(
+    motion: MarqueeMotion,
+    frame_index: int,
+    frame_count: int,
+) -> Optional[Dict[str, float]]:
+    delta = (frame_index - motion.start_frame) % frame_count
+    if delta >= MARQUEE_VISIBLE_FRAMES:
+        return None
+
+    alpha = motion_alpha(delta)
+    if alpha <= 0:
+        return None
+
+    progress = ease_in_out(delta / max(1, MARQUEE_VISIBLE_FRAMES - 1))
+    x = MARQUEE_START_X + (MARQUEE_END_X - MARQUEE_START_X) * progress
+    y = motion.start_y + (motion.end_y - motion.start_y) * progress
+    return {"x": x, "y": y, "alpha": alpha}
+
+
+def apply_chip_alpha(chip: Image.Image, alpha: float) -> Image.Image:
+    if alpha >= 0.999:
+        return chip
+    faded = chip.copy()
+    faded_alpha = faded.getchannel("A").point(lambda value: int(value * alpha))
+    faded.putalpha(faded_alpha)
+    return faded
+
+
+def render_marquee_frames(lane: str) -> list[Image.Image]:
+    motions = build_marquee_motions(lane)
+    frames = []
+
+    for frame_index in range(MARQUEE_FRAME_COUNT):
+        frame = Image.new(
+            "RGBA",
+            (MARQUEE_GIF_WIDTH, MARQUEE_GIF_HEIGHT),
+            (0, 0, 0, 0),
+        )
+        active = []
+        for motion in motions:
+            state = motion_state_for_frame(motion, frame_index, MARQUEE_FRAME_COUNT)
+            if state is not None:
+                active.append((state["y"], motion, state))
+
+        for _, motion, state in sorted(active):
+            chip = apply_chip_alpha(build_chip_image(lane, motion.label), state["alpha"])
+            frame.alpha_composite(chip, (int(state["x"]), int(state["y"])))
+        frames.append(frame)
+    return frames
+
+
+def frames_to_gif(frames: list[Image.Image], output_path: Path) -> None:
+    frames[0].save(
+        output_path,
+        save_all=True,
+        append_images=frames[1:],
+        loop=0,
+        duration=MARQUEE_FRAME_MS,
+        disposal=2,
+        optimize=False,
     )
 
 
-def marquee_left_bottom_svg() -> str:
-    return marquee_svg(
-        TECH_BOTTOM_ITEMS,
-        kind="tech",
-        height=MARQUEE_BOTTOM_HEIGHT,
-        label="Tech stack marquee bottom",
-        lane_key="tech-bottom",
-    )
-
-
-def marquee_right_top_svg() -> str:
-    return marquee_svg(
-        PROJECT_TOP_ITEMS,
-        kind="project",
-        height=MARQUEE_TOP_HEIGHT,
-        label="Project marquee top",
-        lane_key="project-top",
-    )
-
-
-def marquee_right_bottom_svg() -> str:
-    return marquee_svg(
-        PROJECT_BOTTOM_ITEMS,
-        kind="project",
-        height=MARQUEE_BOTTOM_HEIGHT,
-        label="Project marquee bottom",
-        lane_key="project-bottom",
-    )
+def write_marquee_gifs(out_dir: Path) -> None:
+    frames_to_gif(render_marquee_frames("left"), out_dir / "marquee-left.gif")
+    frames_to_gif(render_marquee_frames("right"), out_dir / "marquee-right.gif")
 
 
 def stat_block(x, y, icon, label, value):
@@ -657,27 +696,10 @@ def main():
         overview_svg(stars, commits, prs, issues, repos, contributed),
         encoding="utf-8",
     )
-    (out / "marquee-left-top.svg").write_text(
-        marquee_left_top_svg(),
-        encoding="utf-8",
-    )
-    (out / "marquee-left-bottom.svg").write_text(
-        marquee_left_bottom_svg(),
-        encoding="utf-8",
-    )
-    (out / "marquee-right-top.svg").write_text(
-        marquee_right_top_svg(),
-        encoding="utf-8",
-    )
-    (out / "marquee-right-bottom.svg").write_text(
-        marquee_right_bottom_svg(),
-        encoding="utf-8",
-    )
+    write_marquee_gifs(out)
     print("Done → generated/overview.svg")
-    print("Done → generated/marquee-left-top.svg")
-    print("Done → generated/marquee-left-bottom.svg")
-    print("Done → generated/marquee-right-top.svg")
-    print("Done → generated/marquee-right-bottom.svg")
+    print("Done → generated/marquee-left.gif")
+    print("Done → generated/marquee-right.gif")
 
 
 if __name__ == "__main__":
