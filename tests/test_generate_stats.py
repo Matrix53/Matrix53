@@ -1,4 +1,5 @@
 import unittest
+from tempfile import TemporaryDirectory
 from pathlib import Path
 from unittest import mock
 
@@ -113,6 +114,35 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertGreaterEqual(len(set(partials)), 4)
         self.assertGreater(fade_values[1], fade_values[0])
         self.assertGreater(fade_values[-2], fade_values[-1])
+
+    def test_lane_edge_mask_fades_near_boundaries(self):
+        mask = generate_stats.build_lane_edge_mask()
+        middle_y = generate_stats.MARQUEE_GIF_HEIGHT // 2
+
+        self.assertLess(mask.getpixel((0, middle_y)), 8)
+        self.assertGreater(
+            mask.getpixel((generate_stats.MARQUEE_GIF_WIDTH // 2, middle_y)),
+            240,
+        )
+        self.assertLess(
+            mask.getpixel((generate_stats.MARQUEE_GIF_WIDTH - 1, middle_y)),
+            16,
+        )
+
+    def test_load_icon_image_removes_opaque_white_background_before_tint(self):
+        with TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "icon.png"
+            source = generate_stats.Image.new("RGBA", (8, 8), (255, 255, 255, 255))
+            for x in range(2, 6):
+                for y in range(2, 6):
+                    source.putpixel((x, y), (0, 0, 0, 255))
+            source.save(path)
+
+            generate_stats.load_icon_image.cache_clear()
+            icon = generate_stats.load_icon_image(str(path), 8, 8, "#ff0000")
+
+        self.assertEqual(icon.getpixel((0, 0))[3], 0)
+        self.assertGreater(icon.getpixel((4, 4))[3], 200)
 
     def test_rendered_frames_have_expected_dimensions(self):
         left_frames = generate_stats.render_marquee_frames("left")

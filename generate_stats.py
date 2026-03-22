@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import requests
-from PIL import Image, ImageColor, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageColor, ImageDraw, ImageFont, ImageOps
 
 TOKEN = os.environ.get("ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
 USERNAME = os.environ.get("USERNAME", "Matrix53")
@@ -36,9 +36,10 @@ MARQUEE_PADDING_X = 6
 MARQUEE_LABEL_WIDTH = 104 * MARQUEE_RENDER_SCALE
 MARQUEE_START_X = -46 * MARQUEE_RENDER_SCALE
 MARQUEE_END_X = 10 * MARQUEE_RENDER_SCALE
-MARQUEE_VISIBLE_FRAMES = 20
-MARQUEE_FADE_IN_FRAMES = 4
-MARQUEE_FADE_OUT_FRAMES = 6
+MARQUEE_VISIBLE_FRAMES = 22
+MARQUEE_FADE_IN_FRAMES = 5
+MARQUEE_FADE_OUT_FRAMES = 8
+MARQUEE_EDGE_FADE_WIDTH = 24 * MARQUEE_RENDER_SCALE
 MARQUEE_TEXT_COLOR = "#1f2937"
 MARQUEE_STROKE_COLOR = "#d7dbe8"
 MARQUEE_RING_FILL = "#f5f7fd"
@@ -448,10 +449,23 @@ def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 @lru_cache(maxsize=None)
 def load_icon_image(path: str, box_width: int, box_height: int, tint: str = "") -> Image.Image:
     icon = Image.open(path).convert("RGBA")
+    alpha = icon.getchannel("A")
+
+    # qlmanage-generated PNGs can be fully opaque with a white background.
+    # Derive a mask from luminance in that case so tinting does not turn the
+    # whole thumbnail into a colored square.
+    if alpha.getextrema() == (255, 255):
+        grayscale = ImageOps.grayscale(icon.convert("RGB"))
+        alpha = ImageOps.invert(grayscale).point(
+            lambda value: 0 if value < 12 else min(255, int(value * 1.7))
+        )
+
     if tint:
         colored = Image.new("RGBA", icon.size, ImageColor.getrgb(tint) + (255,))
-        colored.putalpha(icon.getchannel("A"))
+        colored.putalpha(alpha)
         icon = colored
+    else:
+        icon.putalpha(alpha)
 
     scale = min(box_width / icon.width, box_height / icon.height)
     target_width = max(1, int(round(icon.width * scale)))
@@ -463,6 +477,23 @@ def load_icon_image(path: str, box_width: int, box_height: int, tint: str = "") 
         ((box_width - target_width) // 2, (box_height - target_height) // 2),
     )
     return canvas
+
+
+@lru_cache(maxsize=None)
+def build_lane_edge_mask() -> Image.Image:
+    mask = Image.new("L", (MARQUEE_GIF_WIDTH, MARQUEE_GIF_HEIGHT), 255)
+    pixels = mask.load()
+    for x in range(MARQUEE_GIF_WIDTH):
+        alpha = 255
+        if x < MARQUEE_EDGE_FADE_WIDTH:
+            progress = x / max(1, MARQUEE_EDGE_FADE_WIDTH)
+            alpha = int(255 * ease_in_out(progress))
+        elif x > MARQUEE_GIF_WIDTH - MARQUEE_EDGE_FADE_WIDTH:
+            progress = (MARQUEE_GIF_WIDTH - x) / max(1, MARQUEE_EDGE_FADE_WIDTH)
+            alpha = int(255 * ease_in_out(max(0.0, progress)))
+        for y in range(MARQUEE_GIF_HEIGHT):
+            pixels[x, y] = alpha
+    return mask
 
 
 def fit_label_font(text: str) -> ImageFont.ImageFont:
@@ -603,6 +634,7 @@ def apply_chip_alpha(chip: Image.Image, alpha: float) -> Image.Image:
 
 def render_marquee_frames(lane: str) -> list[Image.Image]:
     motions = build_marquee_motions(lane)
+    edge_mask = build_lane_edge_mask()
     frames = []
 
     for frame_index in range(MARQUEE_FRAME_COUNT):
@@ -620,6 +652,8 @@ def render_marquee_frames(lane: str) -> list[Image.Image]:
         for _, motion, state in sorted(active):
             chip = apply_chip_alpha(build_chip_image(lane, motion.label), state["alpha"])
             frame.alpha_composite(chip, (int(state["x"]), int(state["y"])))
+        frame_alpha = ImageChops.multiply(frame.getchannel("A"), edge_mask)
+        frame.putalpha(frame_alpha)
         frames.append(frame)
     return frames
 
