@@ -119,6 +119,36 @@ class GenerateStatsTest(unittest.TestCase):
             item_interval = generate_stats.MARQUEE_DURATION / item_count
             self.assertLessEqual(visible_until, item_interval)
 
+    def test_marquee_items_do_not_leave_a_long_opacity_tail(self):
+        svgs = [
+            generate_stats.marquee_left_top_svg(),
+            generate_stats.marquee_left_bottom_svg(),
+            generate_stats.marquee_right_top_svg(),
+            generate_stats.marquee_right_bottom_svg(),
+        ]
+
+        for svg in svgs:
+            values_match = re.search(r'values="([0-9.;]+)"', svg)
+            self.assertIsNotNone(values_match)
+            values = values_match.group(1).split(";")
+            self.assertEqual(values[-2:], ["0", "0"])
+
+    def test_marquee_items_use_multiple_vertical_paths(self):
+        svgs = [
+            generate_stats.marquee_left_top_svg(),
+            generate_stats.marquee_left_bottom_svg(),
+            generate_stats.marquee_right_top_svg(),
+            generate_stats.marquee_right_bottom_svg(),
+        ]
+
+        for svg in svgs:
+            translate_values = re.findall(
+                r'values="-?[0-9.]+ ([0-9.]+); [0-9.]+ ([0-9.]+)"',
+                svg,
+            )
+            unique_pairs = set(translate_values)
+            self.assertGreater(len(unique_pairs), 1)
+
     def test_readme_keeps_existing_center_assets_without_table_layout(self):
         readme = Path("README.md").read_text()
 

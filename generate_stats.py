@@ -115,6 +115,13 @@ MARQUEE_PHASE_OFFSETS = {
     "project-bottom": -2.25,
 }
 
+MARQUEE_PATHS = {
+    "tech-top": [(6, 16), (14, 8), (10, 20), (18, 10), (8, 18), (16, 12)],
+    "project-top": [(12, 6), (8, 18), (16, 10), (6, 20), (18, 8), (10, 16)],
+    "tech-bottom": [(20, 54), (74, 28), (116, 88), (52, 134), (132, 104), (88, 156)],
+    "project-bottom": [(34, 18), (92, 60), (142, 108), (66, 146), (122, 46), (26, 126)],
+}
+
 
 class InsufficientScopesError(RuntimeError):
     pass
@@ -363,10 +370,6 @@ def asset_data_uri(asset_path: str, tint: str = "") -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-def marquee_track_y(height: int) -> int:
-    return (height - MARQUEE_CHIP_HEIGHT) // 2
-
-
 def marquee_style() -> str:
     return """\
     <style>
@@ -394,10 +397,10 @@ def marquee_style() -> str:
     </style>"""
 
 
-def tech_chip(y: int, label: str) -> str:
+def tech_chip(label: str) -> str:
     icon_href = asset_data_uri(TECH_ICON_FILES[label], TECH_ICON_TINTS.get(label, ""))
     return f"""\
-    <g transform="translate(0 {y})" class="chip-content">
+    <g class="chip-content">
       <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
       <circle class="icon-ring" cx="14" cy="11" r="8" />
       <image class="logo-icon" href="{icon_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
@@ -405,15 +408,20 @@ def tech_chip(y: int, label: str) -> str:
     </g>"""
 
 
-def project_chip(y: int, label: str) -> str:
+def project_chip(label: str) -> str:
     emoji_href = asset_data_uri(PROJECT_EMOJI_FILES[label])
     return f"""\
-    <g transform="translate(0 {y})" class="chip-content">
+    <g class="chip-content">
       <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
       <circle class="icon-ring" cx="14" cy="11" r="8" />
       <image class="emoji-icon" href="{emoji_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
       <text class="label" x="28" y="11.2" textLength="{MARQUEE_LABEL_WIDTH}" lengthAdjust="spacingAndGlyphs">{esc(label)}</text>
     </g>"""
+
+
+def marquee_path_pair(lane_key: str, index: int) -> tuple[int, int]:
+    path_pairs = MARQUEE_PATHS[lane_key]
+    return path_pairs[index % len(path_pairs)]
 
 
 def marquee_item_group(
@@ -422,9 +430,11 @@ def marquee_item_group(
     item_count: int,
     item_svg: str,
     phase_offset: float,
+    lane_key: str,
 ) -> str:
     start_x = -(MARQUEE_CHIP_WIDTH + 12)
     end_x = MARQUEE_WIDTH - MARQUEE_CHIP_WIDTH - MARQUEE_PADDING_X
+    start_y, end_y = marquee_path_pair(lane_key, index)
     interval = MARQUEE_DURATION / item_count
     begin = phase_offset - (index * interval)
     duration = f"{MARQUEE_DURATION}s"
@@ -432,12 +442,12 @@ def marquee_item_group(
   <g class="lane-chip" data-index="{index}" opacity="0">
     <animateTransform attributeName="transform"
                       type="translate"
-                      values="{start_x} 0; {end_x} 0"
+                      values="{start_x} {start_y}; {end_x} {end_y}"
                       dur="{duration}"
                       begin="{begin}s"
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
-             values="0;1;1;0.18;0"
+             values="0;1;1;0;0"
              keyTimes="0;{MARQUEE_FADE_IN_END};{MARQUEE_HOLD_END};{MARQUEE_FADE_OUT_END};1"
              dur="{duration}"
              begin="{begin}s"
@@ -452,15 +462,15 @@ def marquee_svg(
     if kind not in {"tech", "project"}:
         raise ValueError(f"Unsupported marquee kind: {kind}")
 
-    track_y = marquee_track_y(height)
     item_builder = tech_chip if kind == "tech" else project_chip
     phase_offset = MARQUEE_PHASE_OFFSETS[lane_key]
     groups = [
         marquee_item_group(
             index=index,
             item_count=len(items),
-            item_svg=item_builder(track_y, item),
+            item_svg=item_builder(item),
             phase_offset=phase_offset,
+            lane_key=lane_key,
         )
         for index, item in enumerate(items)
     ]
