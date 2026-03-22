@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+import re
 
 import generate_stats
 
@@ -101,6 +102,22 @@ class GenerateStatsTest(unittest.TestCase):
 
         for svg in svgs:
             self.assertIn(duration, svg)
+
+    def test_each_lane_keeps_only_one_item_visible_at_a_time(self):
+        lane_specs = [
+            (generate_stats.marquee_left_top_svg(), len(generate_stats.TECH_TOP_ITEMS)),
+            (generate_stats.marquee_left_bottom_svg(), len(generate_stats.TECH_BOTTOM_ITEMS)),
+            (generate_stats.marquee_right_top_svg(), len(generate_stats.PROJECT_TOP_ITEMS)),
+            (generate_stats.marquee_right_bottom_svg(), len(generate_stats.PROJECT_BOTTOM_ITEMS)),
+        ]
+
+        for svg, item_count in lane_specs:
+            keytimes_match = re.search(r'keyTimes="([^"]+)"', svg)
+            self.assertIsNotNone(keytimes_match)
+            keytimes = [float(value) for value in keytimes_match.group(1).split(";")]
+            visible_until = keytimes[3] * generate_stats.MARQUEE_DURATION
+            item_interval = generate_stats.MARQUEE_DURATION / item_count
+            self.assertLessEqual(visible_until, item_interval)
 
     def test_readme_keeps_existing_center_assets_without_table_layout(self):
         readme = Path("README.md").read_text()

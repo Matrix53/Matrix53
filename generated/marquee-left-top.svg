@@ -37,13 +37,13 @@
                       type="translate"
                       values="-132 0; 6 0"
                       dur="18.0s"
-                      begin="-0.0s"
+                      begin="0.0s"
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
-             begin="-0.0s"
+             begin="0.0s"
              repeatCount="indefinite" />
         <g transform="translate(0 16)" class="chip-content">
       <rect class="chip-bg" rx="11" ry="11" width="120" height="22" />
@@ -61,7 +61,7 @@
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
              begin="-3.0s"
              repeatCount="indefinite" />
@@ -81,7 +81,7 @@
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
              begin="-6.0s"
              repeatCount="indefinite" />
@@ -101,7 +101,7 @@
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
              begin="-9.0s"
              repeatCount="indefinite" />
@@ -121,7 +121,7 @@
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
              begin="-12.0s"
              repeatCount="indefinite" />
@@ -141,7 +141,7 @@
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;0.04;0.1;0.15;1"
              dur="18.0s"
              begin="-15.0s"
              repeatCount="indefinite" />

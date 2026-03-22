@@ -26,6 +26,9 @@ MARQUEE_CHIP_HEIGHT = 22
 MARQUEE_ICON_SIZE = 14
 MARQUEE_PADDING_X = 6
 MARQUEE_LABEL_WIDTH = 84
+MARQUEE_FADE_IN_END = 0.04
+MARQUEE_HOLD_END = 0.10
+MARQUEE_FADE_OUT_END = 0.15
 
 TECH_STACK_ITEMS = [
     "PyTorch",
@@ -104,6 +107,13 @@ TECH_TOP_ITEMS = TECH_STACK_ITEMS[:6]
 TECH_BOTTOM_ITEMS = TECH_STACK_ITEMS[6:]
 PROJECT_TOP_ITEMS = PROJECT_ITEMS[:6]
 PROJECT_BOTTOM_ITEMS = PROJECT_ITEMS[6:]
+
+MARQUEE_PHASE_OFFSETS = {
+    "tech-top": 0.0,
+    "project-top": -0.75,
+    "tech-bottom": -1.5,
+    "project-bottom": -2.25,
+}
 
 
 class InsufficientScopesError(RuntimeError):
@@ -411,10 +421,12 @@ def marquee_item_group(
     index: int,
     item_count: int,
     item_svg: str,
+    phase_offset: float,
 ) -> str:
     start_x = -(MARQUEE_CHIP_WIDTH + 12)
     end_x = MARQUEE_WIDTH - MARQUEE_CHIP_WIDTH - MARQUEE_PADDING_X
-    begin = -(index * (MARQUEE_DURATION / item_count))
+    interval = MARQUEE_DURATION / item_count
+    begin = phase_offset - (index * interval)
     duration = f"{MARQUEE_DURATION}s"
     return f"""\
   <g class="lane-chip" data-index="{index}" opacity="0">
@@ -426,7 +438,7 @@ def marquee_item_group(
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
              values="0;1;1;0.18;0"
-             keyTimes="0;0.16;0.72;0.88;1"
+             keyTimes="0;{MARQUEE_FADE_IN_END};{MARQUEE_HOLD_END};{MARQUEE_FADE_OUT_END};1"
              dur="{duration}"
              begin="{begin}s"
              repeatCount="indefinite" />
@@ -434,17 +446,21 @@ def marquee_item_group(
   </g>"""
 
 
-def marquee_svg(items: list[str], *, kind: str, height: int, label: str) -> str:
+def marquee_svg(
+    items: list[str], *, kind: str, height: int, label: str, lane_key: str
+) -> str:
     if kind not in {"tech", "project"}:
         raise ValueError(f"Unsupported marquee kind: {kind}")
 
     track_y = marquee_track_y(height)
     item_builder = tech_chip if kind == "tech" else project_chip
+    phase_offset = MARQUEE_PHASE_OFFSETS[lane_key]
     groups = [
         marquee_item_group(
             index=index,
             item_count=len(items),
             item_svg=item_builder(track_y, item),
+            phase_offset=phase_offset,
         )
         for index, item in enumerate(items)
     ]
@@ -469,19 +485,43 @@ def marquee_svg(items: list[str], *, kind: str, height: int, label: str) -> str:
 
 
 def marquee_left_top_svg() -> str:
-    return marquee_svg(TECH_TOP_ITEMS, kind="tech", height=MARQUEE_TOP_HEIGHT, label="Tech stack marquee top")
+    return marquee_svg(
+        TECH_TOP_ITEMS,
+        kind="tech",
+        height=MARQUEE_TOP_HEIGHT,
+        label="Tech stack marquee top",
+        lane_key="tech-top",
+    )
 
 
 def marquee_left_bottom_svg() -> str:
-    return marquee_svg(TECH_BOTTOM_ITEMS, kind="tech", height=MARQUEE_BOTTOM_HEIGHT, label="Tech stack marquee bottom")
+    return marquee_svg(
+        TECH_BOTTOM_ITEMS,
+        kind="tech",
+        height=MARQUEE_BOTTOM_HEIGHT,
+        label="Tech stack marquee bottom",
+        lane_key="tech-bottom",
+    )
 
 
 def marquee_right_top_svg() -> str:
-    return marquee_svg(PROJECT_TOP_ITEMS, kind="project", height=MARQUEE_TOP_HEIGHT, label="Project marquee top")
+    return marquee_svg(
+        PROJECT_TOP_ITEMS,
+        kind="project",
+        height=MARQUEE_TOP_HEIGHT,
+        label="Project marquee top",
+        lane_key="project-top",
+    )
 
 
 def marquee_right_bottom_svg() -> str:
-    return marquee_svg(PROJECT_BOTTOM_ITEMS, kind="project", height=MARQUEE_BOTTOM_HEIGHT, label="Project marquee bottom")
+    return marquee_svg(
+        PROJECT_BOTTOM_ITEMS,
+        kind="project",
+        height=MARQUEE_BOTTOM_HEIGHT,
+        label="Project marquee bottom",
+        lane_key="project-bottom",
+    )
 
 
 def stat_block(x, y, icon, label, value):
