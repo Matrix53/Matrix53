@@ -93,6 +93,27 @@ class GenerateStatsTest(unittest.TestCase):
 
             self.assertLessEqual(max_active, 2)
 
+    def test_marquee_uses_high_resolution_rendering(self):
+        self.assertGreater(generate_stats.MARQUEE_RENDER_SCALE, 1)
+        self.assertGreater(
+            generate_stats.MARQUEE_GIF_WIDTH,
+            generate_stats.MARQUEE_DISPLAY_WIDTH,
+        )
+        self.assertGreater(
+            generate_stats.MARQUEE_GIF_HEIGHT,
+            generate_stats.MARQUEE_DISPLAY_HEIGHT,
+        )
+
+    def test_motion_alpha_has_multi_frame_fade(self):
+        fade_values = [
+            generate_stats.motion_alpha(i)
+            for i in range(generate_stats.MARQUEE_VISIBLE_FRAMES)
+        ]
+        partials = [value for value in fade_values if 0 < value < 1]
+        self.assertGreaterEqual(len(set(partials)), 4)
+        self.assertGreater(fade_values[1], fade_values[0])
+        self.assertGreater(fade_values[-2], fade_values[-1])
+
     def test_rendered_frames_have_expected_dimensions(self):
         left_frames = generate_stats.render_marquee_frames("left")
         right_frames = generate_stats.render_marquee_frames("right")

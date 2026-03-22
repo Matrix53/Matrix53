@@ -20,21 +20,25 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
-MARQUEE_GIF_WIDTH = 148
-MARQUEE_GIF_HEIGHT = 276
-MARQUEE_FRAME_COUNT = 72
+MARQUEE_RENDER_SCALE = 2
+MARQUEE_DISPLAY_WIDTH = 148
+MARQUEE_DISPLAY_HEIGHT = 276
+MARQUEE_GIF_WIDTH = MARQUEE_DISPLAY_WIDTH * MARQUEE_RENDER_SCALE
+MARQUEE_GIF_HEIGHT = MARQUEE_DISPLAY_HEIGHT * MARQUEE_RENDER_SCALE
+MARQUEE_FRAME_COUNT = 144
 MARQUEE_FRAME_MS = int(MARQUEE_DURATION * 1000 / MARQUEE_FRAME_COUNT)
 MARQUEE_MAX_ACTIVE = 2
-MARQUEE_CHIP_WIDTH = 136
-MARQUEE_CHIP_HEIGHT = 22
-MARQUEE_ICON_SIZE = 15
+MARQUEE_CHIP_WIDTH = 140 * MARQUEE_RENDER_SCALE
+MARQUEE_CHIP_HEIGHT = 24 * MARQUEE_RENDER_SCALE
+MARQUEE_ICON_BOX_WIDTH = 22 * MARQUEE_RENDER_SCALE
+MARQUEE_ICON_BOX_HEIGHT = 16 * MARQUEE_RENDER_SCALE
 MARQUEE_PADDING_X = 6
-MARQUEE_LABEL_WIDTH = 100
-MARQUEE_START_X = -52
-MARQUEE_END_X = 30
-MARQUEE_VISIBLE_FRAMES = 10
-MARQUEE_FADE_IN_FRAMES = 2
-MARQUEE_FADE_OUT_FRAMES = 2
+MARQUEE_LABEL_WIDTH = 104 * MARQUEE_RENDER_SCALE
+MARQUEE_START_X = -46 * MARQUEE_RENDER_SCALE
+MARQUEE_END_X = 10 * MARQUEE_RENDER_SCALE
+MARQUEE_VISIBLE_FRAMES = 20
+MARQUEE_FADE_IN_FRAMES = 4
+MARQUEE_FADE_OUT_FRAMES = 6
 MARQUEE_TEXT_COLOR = "#1f2937"
 MARQUEE_STROKE_COLOR = "#d7dbe8"
 MARQUEE_RING_FILL = "#f5f7fd"
@@ -442,21 +446,31 @@ def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
 
 
 @lru_cache(maxsize=None)
-def load_icon_image(path: str, size: int, tint: str = "") -> Image.Image:
-    icon = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
+def load_icon_image(path: str, box_width: int, box_height: int, tint: str = "") -> Image.Image:
+    icon = Image.open(path).convert("RGBA")
     if tint:
         colored = Image.new("RGBA", icon.size, ImageColor.getrgb(tint) + (255,))
         colored.putalpha(icon.getchannel("A"))
-        return colored
-    return icon
+        icon = colored
+
+    scale = min(box_width / icon.width, box_height / icon.height)
+    target_width = max(1, int(round(icon.width * scale)))
+    target_height = max(1, int(round(icon.height * scale)))
+    resized = icon.resize((target_width, target_height), Image.LANCZOS)
+    canvas = Image.new("RGBA", (box_width, box_height), (0, 0, 0, 0))
+    canvas.alpha_composite(
+        resized,
+        ((box_width - target_width) // 2, (box_height - target_height) // 2),
+    )
+    return canvas
 
 
 def fit_label_font(text: str) -> ImageFont.ImageFont:
-    for size in (10, 9, 8, 7):
+    for size in (20, 18, 16, 14):
         font = load_font(size, bold=True)
         if font.getbbox(text)[2] <= MARQUEE_LABEL_WIDTH:
             return font
-    return load_font(7, bold=True)
+    return load_font(14, bold=True)
 
 
 @lru_cache(maxsize=None)
@@ -465,31 +479,53 @@ def build_chip_image(lane: str, label: str) -> Image.Image:
     draw = ImageDraw.Draw(chip)
     draw.rounded_rectangle(
         (0, 0, MARQUEE_CHIP_WIDTH - 1, MARQUEE_CHIP_HEIGHT - 1),
-        radius=11,
+        radius=MARQUEE_CHIP_HEIGHT // 2,
         fill=(255, 255, 255, 240),
         outline=ImageColor.getrgb(MARQUEE_STROKE_COLOR),
-        width=1,
+        width=2,
     )
-    draw.ellipse(
-        (6, 3, 6 + 16, 3 + 16),
+    icon_box_x = 10 * MARQUEE_RENDER_SCALE
+    icon_box_y = 4 * MARQUEE_RENDER_SCALE
+    draw.rounded_rectangle(
+        (
+            icon_box_x,
+            icon_box_y,
+            icon_box_x + MARQUEE_ICON_BOX_WIDTH,
+            icon_box_y + MARQUEE_ICON_BOX_HEIGHT,
+        ),
+        radius=MARQUEE_ICON_BOX_HEIGHT // 2,
         fill=ImageColor.getrgb(MARQUEE_RING_FILL),
         outline=ImageColor.getrgb(MARQUEE_RING_STROKE),
-        width=1,
+        width=2,
     )
 
     if lane == "left":
         icon = load_icon_image(
             TECH_ICON_RASTER_FILES[label],
-            MARQUEE_ICON_SIZE,
+            MARQUEE_ICON_BOX_WIDTH - (6 * MARQUEE_RENDER_SCALE),
+            MARQUEE_ICON_BOX_HEIGHT - (6 * MARQUEE_RENDER_SCALE),
             TECH_ICON_TINTS.get(label, ""),
         )
     else:
-        icon = load_icon_image(PROJECT_EMOJI_RASTER_FILES[label], MARQUEE_ICON_SIZE)
-    chip.alpha_composite(icon, (7, 4))
+        icon = load_icon_image(
+            PROJECT_EMOJI_RASTER_FILES[label],
+            MARQUEE_ICON_BOX_WIDTH - (4 * MARQUEE_RENDER_SCALE),
+            MARQUEE_ICON_BOX_HEIGHT - (4 * MARQUEE_RENDER_SCALE),
+        )
+    chip.alpha_composite(
+        icon,
+        (
+            icon_box_x + ((MARQUEE_ICON_BOX_WIDTH - icon.width) // 2),
+            icon_box_y + ((MARQUEE_ICON_BOX_HEIGHT - icon.height) // 2),
+        ),
+    )
 
     font = fit_label_font(label)
+    bbox = font.getbbox(label)
+    text_x = icon_box_x + MARQUEE_ICON_BOX_WIDTH + (8 * MARQUEE_RENDER_SCALE)
+    text_y = ((MARQUEE_CHIP_HEIGHT - (bbox[3] - bbox[1])) // 2) - bbox[1] - 1
     draw.text(
-        (28, 5),
+        (text_x, text_y),
         label,
         font=font,
         fill=ImageColor.getrgb(MARQUEE_TEXT_COLOR),
@@ -503,11 +539,13 @@ def ease_in_out(progress: float) -> float:
 
 def motion_alpha(delta_frame: int) -> float:
     if delta_frame < MARQUEE_FADE_IN_FRAMES:
-        return (delta_frame + 1) / MARQUEE_FADE_IN_FRAMES
+        progress = (delta_frame + 1) / MARQUEE_FADE_IN_FRAMES
+        return ease_in_out(progress)
     fade_start = MARQUEE_VISIBLE_FRAMES - MARQUEE_FADE_OUT_FRAMES
     if delta_frame >= fade_start:
         remaining = MARQUEE_VISIBLE_FRAMES - delta_frame - 1
-        return max(0.0, remaining / MARQUEE_FADE_OUT_FRAMES)
+        progress = max(0.0, remaining / MARQUEE_FADE_OUT_FRAMES)
+        return ease_in_out(progress)
     return 1.0
 
 
@@ -527,8 +565,8 @@ def build_marquee_motions(lane: str) -> list[MarqueeMotion]:
                 asset_path=raster_files[label],
                 start_frame=(lane_phase + index * MARQUEE_INTERVAL_FRAMES)
                 % MARQUEE_FRAME_COUNT,
-                start_y=start_ys[index],
-                end_y=end_ys[index],
+                start_y=start_ys[index] * MARQUEE_RENDER_SCALE,
+                end_y=end_ys[index] * MARQUEE_RENDER_SCALE,
                 tint=tints.get(label),
             )
         )
