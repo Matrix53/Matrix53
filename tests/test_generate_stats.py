@@ -105,7 +105,7 @@ class GenerateStatsTest(unittest.TestCase):
             generate_stats.MARQUEE_DISPLAY_HEIGHT,
         )
 
-    def test_motion_alpha_has_multi_frame_fade(self):
+    def test_motion_alpha_has_multi_frame_fade_in(self):
         fade_values = [
             generate_stats.motion_alpha(i)
             for i in range(generate_stats.MARQUEE_VISIBLE_FRAMES)
@@ -113,7 +113,22 @@ class GenerateStatsTest(unittest.TestCase):
         partials = [value for value in fade_values if 0 < value < 1]
         self.assertGreaterEqual(len(set(partials)), 4)
         self.assertGreater(fade_values[1], fade_values[0])
-        self.assertGreater(fade_values[-2], fade_values[-1])
+        self.assertEqual(fade_values[-1], 1.0)
+
+    def test_exit_alpha_for_x_decreases_near_exit(self):
+        self.assertEqual(
+            generate_stats.exit_alpha_for_x(generate_stats.MARQUEE_EXIT_ALPHA_START_X),
+            1.0,
+        )
+        mid = (
+            generate_stats.MARQUEE_EXIT_ALPHA_START_X
+            + generate_stats.MARQUEE_END_X
+        ) / 2
+        self.assertLess(generate_stats.exit_alpha_for_x(mid), 1.0)
+        self.assertLess(
+            generate_stats.exit_alpha_for_x(generate_stats.MARQUEE_END_X),
+            0.05,
+        )
 
     def test_lane_edge_mask_fades_near_boundaries(self):
         mask = generate_stats.build_lane_edge_mask()
@@ -127,6 +142,10 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertLess(
             mask.getpixel((generate_stats.MARQUEE_GIF_WIDTH - 1, middle_y)),
             16,
+        )
+        self.assertLess(
+            mask.getpixel((generate_stats.MARQUEE_GIF_WIDTH - 72, middle_y)),
+            240,
         )
 
     def test_load_icon_image_removes_opaque_white_background_before_tint(self):

@@ -28,18 +28,20 @@ MARQUEE_GIF_HEIGHT = MARQUEE_DISPLAY_HEIGHT * MARQUEE_RENDER_SCALE
 MARQUEE_FRAME_COUNT = 144
 MARQUEE_FRAME_MS = int(MARQUEE_DURATION * 1000 / MARQUEE_FRAME_COUNT)
 MARQUEE_MAX_ACTIVE = 2
-MARQUEE_CHIP_WIDTH = 140 * MARQUEE_RENDER_SCALE
+MARQUEE_CHIP_WIDTH = 132 * MARQUEE_RENDER_SCALE
 MARQUEE_CHIP_HEIGHT = 24 * MARQUEE_RENDER_SCALE
 MARQUEE_ICON_BOX_WIDTH = 22 * MARQUEE_RENDER_SCALE
 MARQUEE_ICON_BOX_HEIGHT = 16 * MARQUEE_RENDER_SCALE
 MARQUEE_PADDING_X = 6
 MARQUEE_LABEL_WIDTH = 104 * MARQUEE_RENDER_SCALE
-MARQUEE_START_X = -46 * MARQUEE_RENDER_SCALE
-MARQUEE_END_X = 10 * MARQUEE_RENDER_SCALE
-MARQUEE_VISIBLE_FRAMES = 22
+MARQUEE_START_X = -52 * MARQUEE_RENDER_SCALE
+MARQUEE_END_X = 66 * MARQUEE_RENDER_SCALE
+MARQUEE_VISIBLE_FRAMES = 24
 MARQUEE_FADE_IN_FRAMES = 5
-MARQUEE_FADE_OUT_FRAMES = 8
-MARQUEE_EDGE_FADE_WIDTH = 24 * MARQUEE_RENDER_SCALE
+MARQUEE_FADE_OUT_FRAMES = 0
+MARQUEE_ENTRY_FADE_WIDTH = 18 * MARQUEE_RENDER_SCALE
+MARQUEE_EXIT_FADE_WIDTH = 72 * MARQUEE_RENDER_SCALE
+MARQUEE_EXIT_ALPHA_START_X = 24 * MARQUEE_RENDER_SCALE
 MARQUEE_TEXT_COLOR = "#1f2937"
 MARQUEE_STROKE_COLOR = "#d7dbe8"
 MARQUEE_RING_FILL = "#f5f7fd"
@@ -485,11 +487,11 @@ def build_lane_edge_mask() -> Image.Image:
     pixels = mask.load()
     for x in range(MARQUEE_GIF_WIDTH):
         alpha = 255
-        if x < MARQUEE_EDGE_FADE_WIDTH:
-            progress = x / max(1, MARQUEE_EDGE_FADE_WIDTH)
+        if x < MARQUEE_ENTRY_FADE_WIDTH:
+            progress = x / max(1, MARQUEE_ENTRY_FADE_WIDTH)
             alpha = int(255 * ease_in_out(progress))
-        elif x > MARQUEE_GIF_WIDTH - MARQUEE_EDGE_FADE_WIDTH:
-            progress = (MARQUEE_GIF_WIDTH - x) / max(1, MARQUEE_EDGE_FADE_WIDTH)
+        elif x > MARQUEE_GIF_WIDTH - MARQUEE_EXIT_FADE_WIDTH:
+            progress = (MARQUEE_GIF_WIDTH - x) / max(1, MARQUEE_EXIT_FADE_WIDTH)
             alpha = int(255 * ease_in_out(max(0.0, progress)))
         for y in range(MARQUEE_GIF_HEIGHT):
             pixels[x, y] = alpha
@@ -573,11 +575,21 @@ def motion_alpha(delta_frame: int) -> float:
         progress = (delta_frame + 1) / MARQUEE_FADE_IN_FRAMES
         return ease_in_out(progress)
     fade_start = MARQUEE_VISIBLE_FRAMES - MARQUEE_FADE_OUT_FRAMES
-    if delta_frame >= fade_start:
+    if MARQUEE_FADE_OUT_FRAMES > 0 and delta_frame >= fade_start:
         remaining = MARQUEE_VISIBLE_FRAMES - delta_frame - 1
         progress = max(0.0, remaining / MARQUEE_FADE_OUT_FRAMES)
         return ease_in_out(progress)
     return 1.0
+
+
+def exit_alpha_for_x(x: float) -> float:
+    if x <= MARQUEE_EXIT_ALPHA_START_X:
+        return 1.0
+    progress = (x - MARQUEE_EXIT_ALPHA_START_X) / max(
+        1,
+        MARQUEE_END_X - MARQUEE_EXIT_ALPHA_START_X,
+    )
+    return max(0.0, 1.0 - ease_in_out(min(1.0, progress)))
 
 
 def build_marquee_motions(lane: str) -> list[MarqueeMotion]:
@@ -620,6 +632,9 @@ def motion_state_for_frame(
     progress = ease_in_out(delta / max(1, MARQUEE_VISIBLE_FRAMES - 1))
     x = MARQUEE_START_X + (MARQUEE_END_X - MARQUEE_START_X) * progress
     y = motion.start_y + (motion.end_y - motion.start_y) * progress
+    alpha *= exit_alpha_for_x(x)
+    if alpha <= 0:
+        return None
     return {"x": x, "y": y, "alpha": alpha}
 
 
