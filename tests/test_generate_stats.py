@@ -1,5 +1,6 @@
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import generate_stats
 
@@ -122,6 +123,51 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertNotIn("generated/marquee-left-top.svg", readme)
         self.assertNotIn("generated/marquee-right-top.svg", readme)
         self.assertNotIn("<table", readme)
+
+    def test_load_font_tries_multiple_candidates_before_fallback(self):
+        sentinel = object()
+        generate_stats.load_font.cache_clear()
+        with mock.patch.object(
+            generate_stats,
+            "FONT_BOLD_CANDIDATES",
+            ["missing-bold.ttf", "fallback-bold.ttf"],
+        ), mock.patch.object(
+            generate_stats.ImageFont,
+            "truetype",
+            side_effect=[OSError("missing"), sentinel],
+        ) as mocked_truetype:
+            font = generate_stats.load_font(10, bold=True)
+
+        self.assertIs(font, sentinel)
+        self.assertEqual(
+            mocked_truetype.call_args_list,
+            [
+                mock.call("missing-bold.ttf", size=10),
+                mock.call("fallback-bold.ttf", size=10),
+            ],
+        )
+
+    def test_load_font_uses_default_when_no_candidates_work(self):
+        sentinel = object()
+        generate_stats.load_font.cache_clear()
+        with mock.patch.object(
+            generate_stats,
+            "FONT_REGULAR_CANDIDATES",
+            ["missing-regular.ttf"],
+        ), mock.patch.object(
+            generate_stats.ImageFont,
+            "truetype",
+            side_effect=OSError("missing"),
+        ) as mocked_truetype, mock.patch.object(
+            generate_stats.ImageFont,
+            "load_default",
+            return_value=sentinel,
+        ) as mocked_default:
+            font = generate_stats.load_font(9, bold=False)
+
+        self.assertIs(font, sentinel)
+        mocked_truetype.assert_called_once_with("missing-regular.ttf", size=9)
+        mocked_default.assert_called_once()
 
 
 if __name__ == "__main__":

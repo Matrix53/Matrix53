@@ -378,8 +378,26 @@ def esc(s) -> str:
             .replace('"', "&quot;"))
 
 
-FONT_REGULAR_PATH = "/System/Library/Fonts/Supplemental/Arial.ttf"
-FONT_BOLD_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+FONT_REGULAR_CANDIDATES = [
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    "/System/Library/Fonts/Supplemental/Helvetica.ttc",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    "Arial.ttf",
+    "Helvetica.ttc",
+    "DejaVuSans.ttf",
+]
+FONT_BOLD_CANDIDATES = [
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Helvetica Bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
+    "Arial Bold.ttf",
+    "Helvetica Bold.ttf",
+    "DejaVuSans-Bold.ttf",
+]
 
 LEFT_START_YS = [18, 174, 44, 202, 78, 146, 26, 188, 96, 226, 60, 126]
 LEFT_END_YS = [40, 140, 16, 214, 104, 118, 54, 160, 72, 238, 30, 100]
@@ -405,10 +423,22 @@ def lane_items(lane: str) -> list[str]:
     raise ValueError(f"Unsupported lane: {lane}")
 
 
+def fallback_font(size: int) -> ImageFont.ImageFont:
+    try:
+        return ImageFont.load_default(size=size)
+    except TypeError:
+        return ImageFont.load_default()
+
+
 @lru_cache(maxsize=None)
-def load_font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    path = FONT_BOLD_PATH if bold else FONT_REGULAR_PATH
-    return ImageFont.truetype(path, size=size)
+def load_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
+    candidates = FONT_BOLD_CANDIDATES if bold else FONT_REGULAR_CANDIDATES
+    for path in candidates:
+        try:
+            return ImageFont.truetype(path, size=size)
+        except OSError:
+            continue
+    return fallback_font(size)
 
 
 @lru_cache(maxsize=None)
@@ -421,7 +451,7 @@ def load_icon_image(path: str, size: int, tint: str = "") -> Image.Image:
     return icon
 
 
-def fit_label_font(text: str) -> ImageFont.FreeTypeFont:
+def fit_label_font(text: str) -> ImageFont.ImageFont:
     for size in (10, 9, 8, 7):
         font = load_font(size, bold=True)
         if font.getbbox(text)[2] <= MARQUEE_LABEL_WIDTH:
