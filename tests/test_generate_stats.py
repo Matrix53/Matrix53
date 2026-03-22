@@ -111,7 +111,7 @@ class GenerateStatsTest(unittest.TestCase):
     def test_readme_references_existing_center_assets_and_gif_marquees(self):
         readme = Path("README.md").read_text()
 
-        self.assertIn("# Hi, I'm Matrix53 👋", readme)
+        self.assertIn('<h1 align="center">Hi, I\'m Matrix53 👋</h1>', readme)
         self.assertIn(
             "https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&pause=1000&color=FE428E&center=true&vCenter=true&width=435&lines=Always+learning%2C+always+building+%F0%9F%9A%80;BUAA+%7C+SenseTime+%7C+Baidu;Video+Generation+%7C+Diffusion+Model",
             readme,
@@ -123,6 +123,12 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertNotIn("generated/marquee-left-top.svg", readme)
         self.assertNotIn("generated/marquee-right-top.svg", readme)
         self.assertNotIn("<table", readme)
+        self.assertNotIn("<div align=\"center\">", readme)
+
+    def test_generated_gifs_keep_transparent_background(self):
+        for path in ("generated/marquee-left.gif", "generated/marquee-right.gif"):
+            with generate_stats.Image.open(path) as image:
+                self.assertIn("transparency", image.info, path)
 
     def test_load_font_tries_multiple_candidates_before_fallback(self):
         sentinel = object()
