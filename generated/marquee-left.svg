@@ -1,0 +1,287 @@
+<svg width="220" height="332"
+     viewBox="0 0 220 332"
+     xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Tech Stack marquee">
+  <defs>
+    <style>
+      .lane-shell { fill: transparent; }
+      .lane-chip rect.chip-bg {
+        fill: #ffffff;
+        fill-opacity: 0.92;
+        stroke: #d7dbe8;
+        stroke-width: 1;
+      }
+      .lane-chip text.label {
+        font: 600 11px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #1f2937;
+        dominant-baseline: middle;
+      }
+      .lane-chip text.logo-text {
+        font: 700 8px 'Segoe UI', Ubuntu, sans-serif;
+        dominant-baseline: middle;
+        text-anchor: middle;
+      }
+      .lane-chip circle.logo-badge {
+        stroke: rgba(255,255,255,0.35);
+        stroke-width: 0.8;
+      }
+      .guide-label {
+        font: 700 9px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #8d98ad;
+        letter-spacing: 0.08em;
+      }
+      .speed-note {
+        font: 600 8px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #b0bacb;
+      }
+    </style>
+    <clipPath id="lane-clip-left">
+      <rect width="220" height="332" rx="14" ry="14" />
+    </clipPath>
+  </defs>
+
+  <g class="lane-shell center-fade-stop" data-fade="center-fade-stop" data-duration="18.0s" clip-path="url(#lane-clip-left)">
+    <text class="guide-label" x="8" y="10">TECH STACK</text>
+    <text class="speed-note" x="8" y="326">Shared speed · 18.0s</text>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="0" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-139 0; 93 0"
+                      dur="18.0s"
+                      begin="-0.0s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-0.0s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 14)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="119" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#EE4C2C" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">PT</text>
+      <text class="label" x="24" y="10.5">PyTorch</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="1" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-118 0; 114 0"
+                      dur="18.0s"
+                      begin="-1.35s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-1.35s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 40)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="98" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#76B900" />
+      <text class="logo-text" x="10" y="10.5" fill="#102111">CU</text>
+      <text class="label" x="24" y="10.5">CUDA</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="2" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-153 0; 79 0"
+                      dur="18.0s"
+                      begin="-2.7s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-2.7s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 66)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="133" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#6E7DFF" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">Df</text>
+      <text class="label" x="24" y="10.5">Diffusers</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="3" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-174 0; 58 0"
+                      dur="18.0s"
+                      begin="-4.050000000000001s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-4.050000000000001s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 92)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="154" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#F6D04D" />
+      <text class="logo-text" x="10" y="10.5" fill="#231A00">Tr</text>
+      <text class="label" x="24" y="10.5">Transformers</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="4" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-132 0; 100 0"
+                      dur="18.0s"
+                      begin="-5.4s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-5.4s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 118)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="112" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#4F46E5" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">CV</text>
+      <text class="label" x="24" y="10.5">OpenCV</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="5" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-132 0; 100 0"
+                      dur="18.0s"
+                      begin="-6.75s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-6.75s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 144)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="112" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#3776AB" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">Py</text>
+      <text class="label" x="24" y="10.5">Python</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="6" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-118 0; 114 0"
+                      dur="18.0s"
+                      begin="-8.100000000000001s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-8.100000000000001s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 170)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="98" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#B7410E" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">Rs</text>
+      <text class="label" x="24" y="10.5">Rust</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="7" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-104 0; 128 0"
+                      dur="18.0s"
+                      begin="-9.450000000000001s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-9.450000000000001s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 196)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="84" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#00ADD8" />
+      <text class="logo-text" x="10" y="10.5" fill="#032531">Go</text>
+      <text class="label" x="24" y="10.5">Go</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="8" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-146 0; 86 0"
+                      dur="18.0s"
+                      begin="-10.8s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-10.8s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 222)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="126" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#47848F" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">El</text>
+      <text class="label" x="24" y="10.5">Electron</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="9" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-125 0; 107 0"
+                      dur="18.0s"
+                      begin="-12.15s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-12.15s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 248)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="105" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#42B883" />
+      <text class="logo-text" x="10" y="10.5" fill="#0B1F18">V3</text>
+      <text class="label" x="24" y="10.5">Vue 3</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="10" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-111 0; 121 0"
+                      dur="18.0s"
+                      begin="-13.5s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-13.5s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 274)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="91" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#8B5CF6" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">MP</text>
+      <text class="label" x="24" y="10.5">MPI</text>
+    </g>
+  </g>
+  <g class="lane-chip left-to-right-left center-fade-stop" data-row="11" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="-132 0; 100 0"
+                      dur="18.0s"
+                      begin="-14.850000000000001s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="18.0s"
+             begin="-14.850000000000001s"
+             repeatCount="indefinite" />
+        <g transform="translate(0 300)" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="112" height="20" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="#F97316" />
+      <text class="logo-text" x="10" y="10.5" fill="#FFFFFF">OM</text>
+      <text class="label" x="24" y="10.5">OpenMP</text>
+    </g>
+  </g>
+  </g>
+</svg>

@@ -19,6 +19,74 @@ USERNAME = os.environ.get("USERNAME", "Matrix53")
 GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
+MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
+MARQUEE_WIDTH = 220
+MARQUEE_HEIGHT = 332
+MARQUEE_CHIP_HEIGHT = 20
+MARQUEE_ROW_START = 14
+MARQUEE_ROW_GAP = 26
+MARQUEE_PADDING_X = 8
+
+TECH_STACK_ITEMS = [
+    "PyTorch",
+    "CUDA",
+    "Diffusers",
+    "Transformers",
+    "OpenCV",
+    "Python",
+    "Rust",
+    "Go",
+    "Electron",
+    "Vue 3",
+    "MPI",
+    "OpenMP",
+]
+
+PROJECT_ITEMS = [
+    "ELBO-T2IAlign",
+    "DiffSegmenter",
+    "PhoeniX",
+    "PhoeniX Server",
+    "Parallel Programming",
+    "Calcium",
+    "Mario",
+    "Match Maltese",
+    "Algo",
+    "Gobang",
+    "Calendar",
+    "Hazelnut React",
+]
+
+TECH_BADGES = {
+    "PyTorch": ("PT", "#EE4C2C", "#FFFFFF"),
+    "CUDA": ("CU", "#76B900", "#102111"),
+    "Diffusers": ("Df", "#6E7DFF", "#FFFFFF"),
+    "Transformers": ("Tr", "#F6D04D", "#231A00"),
+    "OpenCV": ("CV", "#4F46E5", "#FFFFFF"),
+    "Python": ("Py", "#3776AB", "#FFFFFF"),
+    "Rust": ("Rs", "#B7410E", "#FFFFFF"),
+    "Go": ("Go", "#00ADD8", "#032531"),
+    "Electron": ("El", "#47848F", "#FFFFFF"),
+    "Vue 3": ("V3", "#42B883", "#0B1F18"),
+    "MPI": ("MP", "#8B5CF6", "#FFFFFF"),
+    "OpenMP": ("OM", "#F97316", "#FFFFFF"),
+}
+
+PROJECT_EMOJIS = {
+    "ELBO-T2IAlign": "🧪",
+    "DiffSegmenter": "🧩",
+    "PhoeniX": "🛰️",
+    "PhoeniX Server": "🗄️",
+    "Parallel Programming": "⚙️",
+    "Calcium": "🦀",
+    "Mario": "🍄",
+    "Match Maltese": "🐶",
+    "Algo": "📐",
+    "Gobang": "⚫",
+    "Calendar": "🗓️",
+    "Hazelnut React": "🌰",
+}
+
 
 class InsufficientScopesError(RuntimeError):
     pass
@@ -253,6 +321,192 @@ def esc(s) -> str:
             .replace('"', "&quot;"))
 
 
+def approx_text_width(text: str) -> int:
+    return 46 + len(text) * 7
+
+
+def row_y(row_index: int) -> int:
+    return MARQUEE_ROW_START + row_index * MARQUEE_ROW_GAP
+
+
+def marquee_style(lane: str) -> str:
+    badge_style = ""
+    text_style = ""
+    if lane == "left":
+        badge_style = """\
+      .lane-chip circle.logo-badge {
+        stroke: rgba(255,255,255,0.35);
+        stroke-width: 0.8;
+      }"""
+        text_style = """\
+      .lane-chip text.logo-text {
+        font: 700 8px 'Segoe UI', Ubuntu, sans-serif;
+        dominant-baseline: middle;
+        text-anchor: middle;
+      }"""
+    else:
+        badge_style = """\
+      .lane-chip circle.emoji-badge {
+        fill: #eef4ff;
+        stroke: #d8dfef;
+        stroke-width: 1;
+      }"""
+        text_style = """\
+      .lane-chip text.emoji {
+        font: 13px 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
+        dominant-baseline: middle;
+        text-anchor: middle;
+      }"""
+
+    return f"""\
+    <style>
+      .lane-shell {{ fill: transparent; }}
+      .lane-chip rect.chip-bg {{
+        fill: #ffffff;
+        fill-opacity: 0.92;
+        stroke: #d7dbe8;
+        stroke-width: 1;
+      }}
+      .lane-chip text.label {{
+        font: 600 11px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #1f2937;
+        dominant-baseline: middle;
+      }}
+{text_style}
+{badge_style}
+      .guide-label {{
+        font: 700 9px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #8d98ad;
+        letter-spacing: 0.08em;
+      }}
+      .speed-note {{
+        font: 600 8px 'Segoe UI', Ubuntu, sans-serif;
+        fill: #b0bacb;
+      }}
+    </style>"""
+
+
+def tech_chip(x: int, y: int, label: str) -> str:
+    badge_text, badge_fill, badge_text_fill = TECH_BADGES[label]
+    chip_width = approx_text_width(label) + 24
+    return f"""\
+    <g transform="translate({x} {y})" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="{chip_width}" height="{MARQUEE_CHIP_HEIGHT}" />
+      <circle class="logo-badge" cx="10" cy="10" r="9" fill="{badge_fill}" />
+      <text class="logo-text" x="10" y="10.5" fill="{badge_text_fill}">{esc(badge_text)}</text>
+      <text class="label" x="24" y="10.5">{esc(label)}</text>
+    </g>"""
+
+
+def project_chip(x: int, y: int, label: str) -> str:
+    chip_width = approx_text_width(label) + 28
+    emoji = PROJECT_EMOJIS[label]
+    return f"""\
+    <g transform="translate({x} {y})" class="chip-content">
+      <rect class="chip-bg" rx="10" ry="10" width="{chip_width}" height="{MARQUEE_CHIP_HEIGHT}" />
+      <circle class="emoji-badge" cx="10" cy="10" r="9" />
+      <text class="emoji" x="10" y="10.5">{esc(emoji)}</text>
+      <text class="label" x="24" y="10.5">{esc(label)}</text>
+    </g>"""
+
+
+def marquee_item_group(
+    *,
+    row_index: int,
+    item_svg: str,
+    chip_width: int,
+    animation_class: str,
+    start_x: int,
+    end_x: int,
+) -> str:
+    y = row_y(row_index)
+    begin = -(row_index * 1.35)
+    duration = f"{MARQUEE_DURATION}s"
+    return f"""\
+  <g class="lane-chip {animation_class}" data-row="{row_index}" opacity="0">
+    <animateTransform attributeName="transform"
+                      type="translate"
+                      values="{start_x} 0; {end_x} 0"
+                      dur="{duration}"
+                      begin="{begin}s"
+                      repeatCount="indefinite" />
+    <animate attributeName="opacity"
+             values="0;1;1;0.16;0"
+             keyTimes="0;0.12;0.74;0.9;1"
+             dur="{duration}"
+             begin="{begin}s"
+             repeatCount="indefinite" />
+    {item_svg.format(x=0, y=y, width=chip_width)}
+  </g>"""
+
+
+def marquee_svg(items: list[str], lane: str) -> str:
+    if lane not in {"left", "right"}:
+        raise ValueError(f"Unsupported lane: {lane}")
+
+    animation_class = (
+        "left-to-right-left center-fade-stop"
+        if lane == "left"
+        else "left-to-right-right outer-fade-stop"
+    )
+    lane_label = "TECH STACK" if lane == "left" else "PROJECTS"
+    fade_marker = "center-fade-stop" if lane == "left" else "outer-fade-stop"
+    clip_id = f"lane-clip-{lane}"
+    groups = []
+
+    for row_index, label in enumerate(items):
+        y = row_y(row_index)
+        if lane == "left":
+            chip_width = approx_text_width(label) + 24
+            item_svg = tech_chip("{x}", y, label)
+            start_x = -(chip_width + 20)
+            end_x = MARQUEE_WIDTH - chip_width - MARQUEE_PADDING_X
+        else:
+            chip_width = approx_text_width(label) + 28
+            item_svg = project_chip("{x}", y, label)
+            start_x = -14
+            end_x = MARQUEE_WIDTH - chip_width - MARQUEE_PADDING_X
+
+        groups.append(
+            marquee_item_group(
+                row_index=row_index,
+                item_svg=item_svg,
+                chip_width=chip_width,
+                animation_class=animation_class,
+                start_x=start_x,
+                end_x=end_x,
+            )
+        )
+
+    groups_svg = "\n".join(groups)
+
+    return f"""<svg width="{MARQUEE_WIDTH}" height="{MARQUEE_HEIGHT}"
+     viewBox="0 0 {MARQUEE_WIDTH} {MARQUEE_HEIGHT}"
+     xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="{lane_label.title()} marquee">
+  <defs>
+{marquee_style(lane)}
+    <clipPath id="{clip_id}">
+      <rect width="{MARQUEE_WIDTH}" height="{MARQUEE_HEIGHT}" rx="14" ry="14" />
+    </clipPath>
+  </defs>
+
+  <g class="lane-shell {fade_marker}" data-fade="{fade_marker}" data-duration="{MARQUEE_DURATION}s" clip-path="url(#{clip_id})">
+    <text class="guide-label" x="{MARQUEE_PADDING_X}" y="10">{lane_label}</text>
+    <text class="speed-note" x="{MARQUEE_PADDING_X}" y="{MARQUEE_HEIGHT - 6}">Shared speed · {MARQUEE_DURATION}s</text>
+{groups_svg}
+  </g>
+</svg>"""
+
+
+def marquee_left_svg() -> str:
+    return marquee_svg(TECH_STACK_ITEMS, lane="left")
+
+
+def marquee_right_svg() -> str:
+    return marquee_svg(PROJECT_ITEMS, lane="right")
+
+
 def stat_block(x, y, icon, label, value):
     """Render one stat: icon circle + label + big value."""
     return f"""\
@@ -373,9 +627,14 @@ def main():
     out = Path("generated")
     out.mkdir(exist_ok=True)
     (out / "overview.svg").write_text(
-        overview_svg(stars, commits, prs, issues, repos, contributed)
+        overview_svg(stars, commits, prs, issues, repos, contributed),
+        encoding="utf-8",
     )
+    (out / "marquee-left.svg").write_text(marquee_left_svg(), encoding="utf-8")
+    (out / "marquee-right.svg").write_text(marquee_right_svg(), encoding="utf-8")
     print("Done → generated/overview.svg")
+    print("Done → generated/marquee-left.svg")
+    print("Done → generated/marquee-right.svg")
 
 
 if __name__ == "__main__":
