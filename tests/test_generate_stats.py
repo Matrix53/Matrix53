@@ -1,4 +1,3 @@
-import re
 import unittest
 from pathlib import Path
 
@@ -57,43 +56,53 @@ class GenerateStatsTest(unittest.TestCase):
             ],
         )
 
-    def test_left_marquee_uses_logo_name_and_fades_before_center(self):
-        svg = generate_stats.marquee_left_svg()
+    def test_marquee_assets_exist_for_all_tech_and_project_items(self):
+        for label in generate_stats.TECH_STACK_ITEMS:
+            asset = Path(generate_stats.TECH_ICON_FILES[label])
+            self.assertTrue(asset.exists(), f"missing tech asset for {label}: {asset}")
 
-        self.assertIn("PyTorch", svg)
-        self.assertIn("OpenMP", svg)
-        self.assertIn('class="logo-badge"', svg)
-        self.assertIn("left-to-right-left", svg)
-        self.assertIn("center-fade-stop", svg)
-        self.assertNotIn("emoji-badge", svg)
+        for label in generate_stats.PROJECT_ITEMS:
+            asset = Path(generate_stats.PROJECT_EMOJI_FILES[label])
+            self.assertTrue(asset.exists(), f"missing emoji asset for {label}: {asset}")
 
-    def test_right_marquee_uses_emoji_name_and_moves_left_to_right(self):
-        svg = generate_stats.marquee_right_svg()
+    def test_top_marquees_use_image_based_assets_and_no_shared_speed_label(self):
+        left_svg = generate_stats.marquee_left_top_svg()
+        right_svg = generate_stats.marquee_right_top_svg()
 
-        self.assertIn("ELBO-T2IAlign", svg)
-        self.assertIn("Hazelnut React", svg)
-        self.assertIn('class="emoji-badge"', svg)
-        self.assertIn("left-to-right-right", svg)
-        self.assertIn("outer-fade-stop", svg)
-        self.assertNotIn("logo-badge", svg)
+        self.assertIn('class="logo-icon"', left_svg)
+        self.assertNotIn('class="logo-text"', left_svg)
+        self.assertNotIn("Shared speed", left_svg)
 
-    def test_marquees_share_global_duration_and_dimensions(self):
-        left_svg = generate_stats.marquee_left_svg()
-        right_svg = generate_stats.marquee_right_svg()
+        self.assertIn('class="emoji-icon"', right_svg)
+        self.assertNotIn('class="emoji"', right_svg)
+        self.assertNotIn("🧪", right_svg)
+        self.assertNotIn("Shared speed", right_svg)
+
+    def test_bottom_marquees_use_sparse_single_track_motion(self):
+        left_svg = generate_stats.marquee_left_bottom_svg()
+        right_svg = generate_stats.marquee_right_bottom_svg()
+
+        self.assertEqual(left_svg.count('data-slot="0"'), 1)
+        self.assertEqual(right_svg.count('data-slot="0"'), 1)
+        self.assertNotIn('data-slot="1"', left_svg)
+        self.assertNotIn('data-slot="1"', right_svg)
+
+    def test_marquees_share_global_duration_and_compact_width(self):
+        svgs = [
+            generate_stats.marquee_left_top_svg(),
+            generate_stats.marquee_right_top_svg(),
+            generate_stats.marquee_left_bottom_svg(),
+            generate_stats.marquee_right_bottom_svg(),
+        ]
 
         self.assertGreater(generate_stats.MARQUEE_DURATION, 0)
+        self.assertLessEqual(generate_stats.MARQUEE_WIDTH, 144)
         duration = f"{generate_stats.MARQUEE_DURATION}s"
-        self.assertIn(duration, left_svg)
-        self.assertIn(duration, right_svg)
 
-        expected_viewbox = (
-            f'viewBox="0 0 {generate_stats.MARQUEE_WIDTH} '
-            f'{generate_stats.MARQUEE_HEIGHT}"'
-        )
-        self.assertIn(expected_viewbox, left_svg)
-        self.assertIn(expected_viewbox, right_svg)
+        for svg in svgs:
+            self.assertIn(duration, svg)
 
-    def test_readme_references_existing_center_assets_and_new_marquees(self):
+    def test_readme_keeps_existing_center_assets_without_table_layout(self):
         readme = Path("README.md").read_text()
 
         self.assertIn("# Hi, I'm Matrix53 👋", readme)
@@ -101,23 +110,13 @@ class GenerateStatsTest(unittest.TestCase):
             "https://readme-typing-svg.demolab.com?font=Fira+Code&size=18&pause=1000&color=FE428E&center=true&vCenter=true&width=435&lines=Always+learning%2C+always+building+%F0%9F%9A%80;BUAA+%7C+SenseTime+%7C+Baidu;Video+Generation+%7C+Diffusion+Model",
             readme,
         )
-        self.assertIn(
-            "https://git.io/typing-svg",
-            readme,
-        )
+        self.assertIn("https://git.io/typing-svg", readme)
         self.assertIn("generated/overview.svg", readme)
-        self.assertIn("generated/marquee-left.svg", readme)
-        self.assertIn("generated/marquee-right.svg", readme)
-        self.assertRegex(readme, r"<table[^>]*align=\"center\"")
-
-    def test_marquee_rows_are_symmetric(self):
-        left_svg = generate_stats.marquee_left_svg()
-        right_svg = generate_stats.marquee_right_svg()
-
-        left_rows = re.findall(r'data-row="(\d+)"', left_svg)
-        right_rows = re.findall(r'data-row="(\d+)"', right_svg)
-        self.assertEqual(left_rows, right_rows)
-        self.assertEqual(len(left_rows), len(generate_stats.TECH_STACK_ITEMS))
+        self.assertNotIn("<table", readme)
+        self.assertIn("generated/marquee-left-top.svg", readme)
+        self.assertIn("generated/marquee-left-bottom.svg", readme)
+        self.assertIn("generated/marquee-right-top.svg", readme)
+        self.assertIn("generated/marquee-right-bottom.svg", readme)
 
 
 if __name__ == "__main__":

@@ -1,17 +1,15 @@
 """
-Generate GitHub stats SVG card for Matrix53's profile README.
-Outputs: generated/overview.svg
-
-Features:
-- All-time commits (loops year-by-year since account creation)
-- Stars from own repos + org repos where viewer is owner/admin
-- Beautiful radical-themed card with gradient border & glow
+Generate GitHub stats SVG card and README marquee assets for Matrix53's profile.
+Outputs: generated/overview.svg and generated/marquee-*.svg
 """
 
+import base64
 import os
-import requests
-from pathlib import Path
 from datetime import datetime, timezone
+from functools import lru_cache
+from pathlib import Path
+
+import requests
 
 TOKEN = os.environ.get("ACCESS_TOKEN") or os.environ.get("GITHUB_TOKEN")
 USERNAME = os.environ.get("USERNAME", "Matrix53")
@@ -20,12 +18,14 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
-MARQUEE_WIDTH = 220
-MARQUEE_HEIGHT = 332
-MARQUEE_CHIP_HEIGHT = 20
-MARQUEE_ROW_START = 14
-MARQUEE_ROW_GAP = 26
-MARQUEE_PADDING_X = 8
+MARQUEE_WIDTH = 132
+MARQUEE_TOP_HEIGHT = 54
+MARQUEE_BOTTOM_HEIGHT = 200
+MARQUEE_CHIP_WIDTH = 120
+MARQUEE_CHIP_HEIGHT = 22
+MARQUEE_ICON_SIZE = 14
+MARQUEE_PADDING_X = 6
+MARQUEE_LABEL_WIDTH = 84
 
 TECH_STACK_ITEMS = [
     "PyTorch",
@@ -57,35 +57,53 @@ PROJECT_ITEMS = [
     "Hazelnut React",
 ]
 
-TECH_BADGES = {
-    "PyTorch": ("PT", "#EE4C2C", "#FFFFFF"),
-    "CUDA": ("CU", "#76B900", "#102111"),
-    "Diffusers": ("Df", "#6E7DFF", "#FFFFFF"),
-    "Transformers": ("Tr", "#F6D04D", "#231A00"),
-    "OpenCV": ("CV", "#4F46E5", "#FFFFFF"),
-    "Python": ("Py", "#3776AB", "#FFFFFF"),
-    "Rust": ("Rs", "#B7410E", "#FFFFFF"),
-    "Go": ("Go", "#00ADD8", "#032531"),
-    "Electron": ("El", "#47848F", "#FFFFFF"),
-    "Vue 3": ("V3", "#42B883", "#0B1F18"),
-    "MPI": ("MP", "#8B5CF6", "#FFFFFF"),
-    "OpenMP": ("OM", "#F97316", "#FFFFFF"),
+TECH_ICON_FILES = {
+    "PyTorch": "assets/readme/tech/pytorch.svg",
+    "CUDA": "assets/readme/tech/cuda.svg",
+    "Diffusers": "assets/readme/tech/diffusers.svg",
+    "Transformers": "assets/readme/tech/transformers.svg",
+    "OpenCV": "assets/readme/tech/opencv.svg",
+    "Python": "assets/readme/tech/python.svg",
+    "Rust": "assets/readme/tech/rust.svg",
+    "Go": "assets/readme/tech/go.svg",
+    "Electron": "assets/readme/tech/electron.svg",
+    "Vue 3": "assets/readme/tech/vue3.svg",
+    "MPI": "assets/readme/tech/mpi.png",
+    "OpenMP": "assets/readme/tech/openmp.svg",
 }
 
-PROJECT_EMOJIS = {
-    "ELBO-T2IAlign": "🧪",
-    "DiffSegmenter": "🧩",
-    "PhoeniX": "🛰️",
-    "PhoeniX Server": "🗄️",
-    "Parallel Programming": "⚙️",
-    "Calcium": "🦀",
-    "Mario": "🍄",
-    "Match Maltese": "🐶",
-    "Algo": "📐",
-    "Gobang": "⚫",
-    "Calendar": "🗓️",
-    "Hazelnut React": "🌰",
+TECH_ICON_TINTS = {
+    "PyTorch": "#EE4C2C",
+    "CUDA": "#76B900",
+    "Diffusers": "#FFD21E",
+    "Transformers": "#FFD21E",
+    "OpenCV": "#5C3EE8",
+    "Python": "#3776AB",
+    "Rust": "#000000",
+    "Go": "#00ADD8",
+    "Electron": "#47848F",
+    "Vue 3": "#4FC08D",
 }
+
+PROJECT_EMOJI_FILES = {
+    "ELBO-T2IAlign": "assets/readme/emoji/elbo.svg",
+    "DiffSegmenter": "assets/readme/emoji/diffsegmenter.svg",
+    "PhoeniX": "assets/readme/emoji/phoenix.svg",
+    "PhoeniX Server": "assets/readme/emoji/phoenix-server.svg",
+    "Parallel Programming": "assets/readme/emoji/parallel.svg",
+    "Calcium": "assets/readme/emoji/calcium.svg",
+    "Mario": "assets/readme/emoji/mario.svg",
+    "Match Maltese": "assets/readme/emoji/match-maltese.svg",
+    "Algo": "assets/readme/emoji/algo.svg",
+    "Gobang": "assets/readme/emoji/gobang.svg",
+    "Calendar": "assets/readme/emoji/calendar.svg",
+    "Hazelnut React": "assets/readme/emoji/hazelnut-react.svg",
+}
+
+TECH_TOP_ITEMS = TECH_STACK_ITEMS[:6]
+TECH_BOTTOM_ITEMS = TECH_STACK_ITEMS[6:]
+PROJECT_TOP_ITEMS = PROJECT_ITEMS[:6]
+PROJECT_BOTTOM_ITEMS = PROJECT_ITEMS[6:]
 
 
 class InsufficientScopesError(RuntimeError):
@@ -321,109 +339,85 @@ def esc(s) -> str:
             .replace('"', "&quot;"))
 
 
-def approx_text_width(text: str) -> int:
-    return 46 + len(text) * 7
+@lru_cache(maxsize=None)
+def asset_data_uri(asset_path: str, tint: str = "") -> str:
+    path = Path(asset_path)
+    mime_type = "image/png" if path.suffix.lower() == ".png" else "image/svg+xml"
+    data = path.read_bytes()
+    if tint and path.suffix.lower() == ".svg":
+        svg_text = data.decode("utf-8")
+        if ' fill="' not in svg_text:
+            svg_text = svg_text.replace("<svg ", f'<svg fill="{tint}" ', 1)
+        data = svg_text.encode("utf-8")
+    encoded = base64.b64encode(data).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
 
 
-def row_y(row_index: int) -> int:
-    return MARQUEE_ROW_START + row_index * MARQUEE_ROW_GAP
+def marquee_track_y(height: int) -> int:
+    return (height - MARQUEE_CHIP_HEIGHT) // 2
 
 
-def marquee_style(lane: str) -> str:
-    badge_style = ""
-    text_style = ""
-    if lane == "left":
-        badge_style = """\
-      .lane-chip circle.logo-badge {
-        stroke: rgba(255,255,255,0.35);
-        stroke-width: 0.8;
-      }"""
-        text_style = """\
-      .lane-chip text.logo-text {
-        font: 700 8px 'Segoe UI', Ubuntu, sans-serif;
-        dominant-baseline: middle;
-        text-anchor: middle;
-      }"""
-    else:
-        badge_style = """\
-      .lane-chip circle.emoji-badge {
-        fill: #eef4ff;
-        stroke: #d8dfef;
-        stroke-width: 1;
-      }"""
-        text_style = """\
-      .lane-chip text.emoji {
-        font: 13px 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
-        dominant-baseline: middle;
-        text-anchor: middle;
-      }"""
-
-    return f"""\
+def marquee_style() -> str:
+    return """\
     <style>
-      .lane-shell {{ fill: transparent; }}
-      .lane-chip rect.chip-bg {{
+      .lane-shell { fill: transparent; }
+      .lane-chip rect.chip-bg {
         fill: #ffffff;
-        fill-opacity: 0.92;
+        fill-opacity: 0.94;
         stroke: #d7dbe8;
         stroke-width: 1;
-      }}
-      .lane-chip text.label {{
-        font: 600 11px 'Segoe UI', Ubuntu, sans-serif;
+      }
+      .lane-chip circle.icon-ring {
+        fill: #f5f7fd;
+        stroke: #dbe3f1;
+        stroke-width: 0.9;
+      }
+      .lane-chip image.logo-icon,
+      .lane-chip image.emoji-icon {
+        overflow: visible;
+      }
+      .lane-chip text.label {
+        font: 600 8.6px 'Segoe UI', Ubuntu, sans-serif;
         fill: #1f2937;
         dominant-baseline: middle;
-      }}
-{text_style}
-{badge_style}
-      .guide-label {{
-        font: 700 9px 'Segoe UI', Ubuntu, sans-serif;
-        fill: #8d98ad;
-        letter-spacing: 0.08em;
-      }}
-      .speed-note {{
-        font: 600 8px 'Segoe UI', Ubuntu, sans-serif;
-        fill: #b0bacb;
-      }}
+      }
     </style>"""
 
 
-def tech_chip(x: int, y: int, label: str) -> str:
-    badge_text, badge_fill, badge_text_fill = TECH_BADGES[label]
-    chip_width = approx_text_width(label) + 24
+def tech_chip(y: int, label: str) -> str:
+    icon_href = asset_data_uri(TECH_ICON_FILES[label], TECH_ICON_TINTS.get(label, ""))
     return f"""\
-    <g transform="translate({x} {y})" class="chip-content">
-      <rect class="chip-bg" rx="10" ry="10" width="{chip_width}" height="{MARQUEE_CHIP_HEIGHT}" />
-      <circle class="logo-badge" cx="10" cy="10" r="9" fill="{badge_fill}" />
-      <text class="logo-text" x="10" y="10.5" fill="{badge_text_fill}">{esc(badge_text)}</text>
-      <text class="label" x="24" y="10.5">{esc(label)}</text>
+    <g transform="translate(0 {y})" class="chip-content">
+      <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
+      <circle class="icon-ring" cx="14" cy="11" r="8" />
+      <image class="logo-icon" href="{icon_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
+      <text class="label" x="28" y="11.2" textLength="{MARQUEE_LABEL_WIDTH}" lengthAdjust="spacingAndGlyphs">{esc(label)}</text>
     </g>"""
 
 
-def project_chip(x: int, y: int, label: str) -> str:
-    chip_width = approx_text_width(label) + 28
-    emoji = PROJECT_EMOJIS[label]
+def project_chip(y: int, label: str) -> str:
+    emoji_href = asset_data_uri(PROJECT_EMOJI_FILES[label])
     return f"""\
-    <g transform="translate({x} {y})" class="chip-content">
-      <rect class="chip-bg" rx="10" ry="10" width="{chip_width}" height="{MARQUEE_CHIP_HEIGHT}" />
-      <circle class="emoji-badge" cx="10" cy="10" r="9" />
-      <text class="emoji" x="10" y="10.5">{esc(emoji)}</text>
-      <text class="label" x="24" y="10.5">{esc(label)}</text>
+    <g transform="translate(0 {y})" class="chip-content">
+      <rect class="chip-bg" rx="11" ry="11" width="{MARQUEE_CHIP_WIDTH}" height="{MARQUEE_CHIP_HEIGHT}" />
+      <circle class="icon-ring" cx="14" cy="11" r="8" />
+      <image class="emoji-icon" href="{emoji_href}" x="7" y="4" width="{MARQUEE_ICON_SIZE}" height="{MARQUEE_ICON_SIZE}" preserveAspectRatio="xMidYMid meet" />
+      <text class="label" x="28" y="11.2" textLength="{MARQUEE_LABEL_WIDTH}" lengthAdjust="spacingAndGlyphs">{esc(label)}</text>
     </g>"""
 
 
 def marquee_item_group(
     *,
-    row_index: int,
+    index: int,
+    item_count: int,
     item_svg: str,
-    chip_width: int,
-    animation_class: str,
-    start_x: int,
-    end_x: int,
 ) -> str:
-    y = row_y(row_index)
-    begin = -(row_index * 1.35)
+    start_x = -(MARQUEE_CHIP_WIDTH + 12)
+    end_x = MARQUEE_WIDTH - MARQUEE_CHIP_WIDTH - MARQUEE_PADDING_X
+    begin = -(index * (MARQUEE_DURATION / item_count))
     duration = f"{MARQUEE_DURATION}s"
     return f"""\
-  <g class="lane-chip {animation_class}" data-row="{row_index}" opacity="0">
+  <g class="lane-chip" data-index="{index}" opacity="0">
     <animateTransform attributeName="transform"
                       type="translate"
                       values="{start_x} 0; {end_x} 0"
@@ -431,80 +425,63 @@ def marquee_item_group(
                       begin="{begin}s"
                       repeatCount="indefinite" />
     <animate attributeName="opacity"
-             values="0;1;1;0.16;0"
-             keyTimes="0;0.12;0.74;0.9;1"
+             values="0;1;1;0.18;0"
+             keyTimes="0;0.16;0.72;0.88;1"
              dur="{duration}"
              begin="{begin}s"
              repeatCount="indefinite" />
-    {item_svg.format(x=0, y=y, width=chip_width)}
+    {item_svg}
   </g>"""
 
 
-def marquee_svg(items: list[str], lane: str) -> str:
-    if lane not in {"left", "right"}:
-        raise ValueError(f"Unsupported lane: {lane}")
+def marquee_svg(items: list[str], *, kind: str, height: int, label: str) -> str:
+    if kind not in {"tech", "project"}:
+        raise ValueError(f"Unsupported marquee kind: {kind}")
 
-    animation_class = (
-        "left-to-right-left center-fade-stop"
-        if lane == "left"
-        else "left-to-right-right outer-fade-stop"
-    )
-    lane_label = "TECH STACK" if lane == "left" else "PROJECTS"
-    fade_marker = "center-fade-stop" if lane == "left" else "outer-fade-stop"
-    clip_id = f"lane-clip-{lane}"
-    groups = []
-
-    for row_index, label in enumerate(items):
-        y = row_y(row_index)
-        if lane == "left":
-            chip_width = approx_text_width(label) + 24
-            item_svg = tech_chip("{x}", y, label)
-            start_x = -(chip_width + 20)
-            end_x = MARQUEE_WIDTH - chip_width - MARQUEE_PADDING_X
-        else:
-            chip_width = approx_text_width(label) + 28
-            item_svg = project_chip("{x}", y, label)
-            start_x = -14
-            end_x = MARQUEE_WIDTH - chip_width - MARQUEE_PADDING_X
-
-        groups.append(
-            marquee_item_group(
-                row_index=row_index,
-                item_svg=item_svg,
-                chip_width=chip_width,
-                animation_class=animation_class,
-                start_x=start_x,
-                end_x=end_x,
-            )
+    track_y = marquee_track_y(height)
+    item_builder = tech_chip if kind == "tech" else project_chip
+    groups = [
+        marquee_item_group(
+            index=index,
+            item_count=len(items),
+            item_svg=item_builder(track_y, item),
         )
-
+        for index, item in enumerate(items)
+    ]
     groups_svg = "\n".join(groups)
+    clip_id = label.lower().replace(" ", "-")
 
-    return f"""<svg width="{MARQUEE_WIDTH}" height="{MARQUEE_HEIGHT}"
-     viewBox="0 0 {MARQUEE_WIDTH} {MARQUEE_HEIGHT}"
+    return f"""<svg width="{MARQUEE_WIDTH}" height="{height}"
+     viewBox="0 0 {MARQUEE_WIDTH} {height}"
      xmlns="http://www.w3.org/2000/svg" role="img"
-     aria-label="{lane_label.title()} marquee">
+     aria-label="{label}">
   <defs>
-{marquee_style(lane)}
-    <clipPath id="{clip_id}">
-      <rect width="{MARQUEE_WIDTH}" height="{MARQUEE_HEIGHT}" rx="14" ry="14" />
+{marquee_style()}
+    <clipPath id="lane-clip-{clip_id}">
+      <rect width="{MARQUEE_WIDTH}" height="{height}" rx="12" ry="12" />
     </clipPath>
   </defs>
 
-  <g class="lane-shell {fade_marker}" data-fade="{fade_marker}" data-duration="{MARQUEE_DURATION}s" clip-path="url(#{clip_id})">
-    <text class="guide-label" x="{MARQUEE_PADDING_X}" y="10">{lane_label}</text>
-    <text class="speed-note" x="{MARQUEE_PADDING_X}" y="{MARQUEE_HEIGHT - 6}">Shared speed · {MARQUEE_DURATION}s</text>
+  <g class="lane-shell" data-slot="0" clip-path="url(#lane-clip-{clip_id})">
 {groups_svg}
   </g>
 </svg>"""
 
 
-def marquee_left_svg() -> str:
-    return marquee_svg(TECH_STACK_ITEMS, lane="left")
+def marquee_left_top_svg() -> str:
+    return marquee_svg(TECH_TOP_ITEMS, kind="tech", height=MARQUEE_TOP_HEIGHT, label="Tech stack marquee top")
 
 
-def marquee_right_svg() -> str:
-    return marquee_svg(PROJECT_ITEMS, lane="right")
+def marquee_left_bottom_svg() -> str:
+    return marquee_svg(TECH_BOTTOM_ITEMS, kind="tech", height=MARQUEE_BOTTOM_HEIGHT, label="Tech stack marquee bottom")
+
+
+def marquee_right_top_svg() -> str:
+    return marquee_svg(PROJECT_TOP_ITEMS, kind="project", height=MARQUEE_TOP_HEIGHT, label="Project marquee top")
+
+
+def marquee_right_bottom_svg() -> str:
+    return marquee_svg(PROJECT_BOTTOM_ITEMS, kind="project", height=MARQUEE_BOTTOM_HEIGHT, label="Project marquee bottom")
 
 
 def stat_block(x, y, icon, label, value):
@@ -630,11 +607,27 @@ def main():
         overview_svg(stars, commits, prs, issues, repos, contributed),
         encoding="utf-8",
     )
-    (out / "marquee-left.svg").write_text(marquee_left_svg(), encoding="utf-8")
-    (out / "marquee-right.svg").write_text(marquee_right_svg(), encoding="utf-8")
+    (out / "marquee-left-top.svg").write_text(
+        marquee_left_top_svg(),
+        encoding="utf-8",
+    )
+    (out / "marquee-left-bottom.svg").write_text(
+        marquee_left_bottom_svg(),
+        encoding="utf-8",
+    )
+    (out / "marquee-right-top.svg").write_text(
+        marquee_right_top_svg(),
+        encoding="utf-8",
+    )
+    (out / "marquee-right-bottom.svg").write_text(
+        marquee_right_bottom_svg(),
+        encoding="utf-8",
+    )
     print("Done → generated/overview.svg")
-    print("Done → generated/marquee-left.svg")
-    print("Done → generated/marquee-right.svg")
+    print("Done → generated/marquee-left-top.svg")
+    print("Done → generated/marquee-left-bottom.svg")
+    print("Done → generated/marquee-right-top.svg")
+    print("Done → generated/marquee-right-bottom.svg")
 
 
 if __name__ == "__main__":
