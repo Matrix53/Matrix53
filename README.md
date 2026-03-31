@@ -1,11 +1,11 @@
 <h1 align="center">Hi, I'm Matrix53 👋</h1>
 
 <picture>
-  <source media="(min-width: 1160px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-left-display.gif" />
+  <source media="(min-width: 1280px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-left-display.gif" />
   <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-hidden.svg" alt="" align="left" />
 </picture>
 <picture>
-  <source media="(min-width: 1160px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-right-display.gif" />
+  <source media="(min-width: 1280px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-right-display.gif" />
   <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-hidden.svg" alt="" align="right" />
 </picture>
 

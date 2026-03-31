@@ -202,7 +202,25 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertNotIn("<div align=\"center\">", readme)
 
     def test_readme_marquee_breakpoint_leaves_room_for_github_profile_layout(self):
-        self.assertGreaterEqual(generate_stats.README_MARQUEE_MIN_WIDTH, 1160)
+        self.assertEqual(
+            generate_stats.README_REQUIRED_MAIN_WIDTH,
+            generate_stats.README_CENTER_STACK_WIDTH
+            + (2 * generate_stats.MARQUEE_DISPLAY_WIDTH),
+        )
+        self.assertEqual(generate_stats.README_REQUIRED_MAIN_WIDTH, 791)
+        self.assertLess(
+            generate_stats.GITHUB_PROFILE_LARGE_MAIN_WIDTH_MAX,
+            generate_stats.README_REQUIRED_MAIN_WIDTH,
+        )
+        self.assertGreaterEqual(
+            generate_stats.GITHUB_PROFILE_XLARGE_MAIN_WIDTH_MIN,
+            generate_stats.README_REQUIRED_MAIN_WIDTH,
+        )
+        self.assertEqual(
+            generate_stats.README_MARQUEE_MIN_WIDTH,
+            generate_stats.GITHUB_XLARGE_BREAKPOINT,
+        )
+        self.assertEqual(generate_stats.README_MARQUEE_MIN_WIDTH, 1280)
 
     def test_write_marquee_gifs_writes_display_gifs_and_hidden_placeholder(self):
         with TemporaryDirectory() as tmpdir:
