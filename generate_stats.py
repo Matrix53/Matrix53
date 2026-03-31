@@ -20,6 +20,7 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
+README_MARQUEE_MIN_WIDTH = 860
 MARQUEE_RENDER_SCALE = 2
 MARQUEE_DISPLAY_WIDTH = 148
 MARQUEE_DISPLAY_HEIGHT = 276
@@ -46,6 +47,8 @@ MARQUEE_TEXT_COLOR = "#1f2937"
 MARQUEE_STROKE_COLOR = "#d7dbe8"
 MARQUEE_RING_FILL = "#f5f7fd"
 MARQUEE_RING_STROKE = "#dbe3f1"
+MARQUEE_PLACEHOLDER_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" viewBox="0 0 0 0"></svg>
+"""
 
 TECH_STACK_ITEMS = [
     "PyTorch",
@@ -685,9 +688,34 @@ def frames_to_gif(frames: list[Image.Image], output_path: Path) -> None:
     )
 
 
+def resize_marquee_frames_for_readme(frames: list[Image.Image]) -> list[Image.Image]:
+    resampling = getattr(getattr(Image, "Resampling", Image), "LANCZOS")
+    return [
+        frame.resize(
+            (MARQUEE_DISPLAY_WIDTH, MARQUEE_DISPLAY_HEIGHT),
+            resampling,
+        )
+        for frame in frames
+    ]
+
+
+def write_hidden_marquee_placeholder(out_dir: Path) -> None:
+    (out_dir / "marquee-hidden.svg").write_text(
+        MARQUEE_PLACEHOLDER_SVG,
+        encoding="utf-8",
+    )
+
+
 def write_marquee_gifs(out_dir: Path) -> None:
-    frames_to_gif(render_marquee_frames("left"), out_dir / "marquee-left.gif")
-    frames_to_gif(render_marquee_frames("right"), out_dir / "marquee-right.gif")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for lane in ("left", "right"):
+        frames = render_marquee_frames(lane)
+        frames_to_gif(frames, out_dir / f"marquee-{lane}.gif")
+        frames_to_gif(
+            resize_marquee_frames_for_readme(frames),
+            out_dir / f"marquee-{lane}-display.gif",
+        )
+    write_hidden_marquee_placeholder(out_dir)
 
 
 def stat_block(x, y, icon, label, value):
@@ -817,6 +845,9 @@ def main():
     print("Done → generated/overview.svg")
     print("Done → generated/marquee-left.gif")
     print("Done → generated/marquee-right.gif")
+    print("Done → generated/marquee-left-display.gif")
+    print("Done → generated/marquee-right-display.gif")
+    print("Done → generated/marquee-hidden.svg")
 
 
 if __name__ == "__main__":

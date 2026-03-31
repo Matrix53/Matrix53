@@ -188,12 +188,38 @@ class GenerateStatsTest(unittest.TestCase):
         )
         self.assertIn("https://git.io/typing-svg", readme)
         self.assertIn("generated/overview.svg", readme)
-        self.assertIn("generated/marquee-left.gif", readme)
-        self.assertIn("generated/marquee-right.gif", readme)
+        self.assertIn("generated/marquee-left-display.gif", readme)
+        self.assertIn("generated/marquee-right-display.gif", readme)
+        self.assertIn("generated/marquee-hidden.svg", readme)
+        self.assertIn('media="(min-width: 860px)"', readme)
         self.assertNotIn("generated/marquee-left-top.svg", readme)
         self.assertNotIn("generated/marquee-right-top.svg", readme)
         self.assertNotIn("<table", readme)
         self.assertNotIn("<div align=\"center\">", readme)
+
+    def test_write_marquee_gifs_writes_display_gifs_and_hidden_placeholder(self):
+        with TemporaryDirectory() as tmpdir:
+            out_dir = Path(tmpdir)
+            generate_stats.write_marquee_gifs(out_dir)
+
+            self.assertTrue((out_dir / "marquee-left.gif").exists())
+            self.assertTrue((out_dir / "marquee-right.gif").exists())
+            self.assertTrue((out_dir / "marquee-left-display.gif").exists())
+            self.assertTrue((out_dir / "marquee-right-display.gif").exists())
+            self.assertTrue((out_dir / "marquee-hidden.svg").exists())
+
+            with generate_stats.Image.open(out_dir / "marquee-left-display.gif") as image:
+                self.assertEqual(
+                    image.size,
+                    (
+                        generate_stats.MARQUEE_DISPLAY_WIDTH,
+                        generate_stats.MARQUEE_DISPLAY_HEIGHT,
+                    ),
+                )
+
+            placeholder_svg = (out_dir / "marquee-hidden.svg").read_text()
+            self.assertIn('width="0"', placeholder_svg)
+            self.assertIn('height="0"', placeholder_svg)
 
     def test_generated_gifs_keep_transparent_background(self):
         for path in ("generated/marquee-left.gif", "generated/marquee-right.gif"):

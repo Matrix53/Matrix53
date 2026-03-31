@@ -1,7 +1,13 @@
 <h1 align="center">Hi, I'm Matrix53 👋</h1>
 
-<img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-left.gif" alt="Tech Stack Marquee" width="148" align="left" />
-<img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-right.gif" alt="Project Marquee" width="148" align="right" />
+<picture>
+  <source media="(min-width: 860px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-left-display.gif" />
+  <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-hidden.svg" alt="" align="left" />
+</picture>
+<picture>
+  <source media="(min-width: 860px)" srcset="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-right-display.gif" />
+  <img src="https://raw.githubusercontent.com/Matrix53/Matrix53/main/generated/marquee-hidden.svg" alt="" align="right" />
+</picture>
 
 <p align="center">
   <a href="https://git.io/typing-svg">
