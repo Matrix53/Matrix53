@@ -20,7 +20,10 @@ GRAPHQL_URL = "https://api.github.com/graphql"
 HEADERS = {"Authorization": f"bearer {TOKEN}"}
 
 MARQUEE_DURATION = float(os.environ.get("MARQUEE_DURATION", "18"))
-README_MARQUEE_MIN_WIDTH = 860
+# GitHub profile READMEs render inside a narrower content column than the full
+# viewport, so the marquee lanes need a conservative breakpoint to avoid
+# wrapping above the center stats card on medium-width screens.
+README_MARQUEE_MIN_WIDTH = 1160
 MARQUEE_RENDER_SCALE = 2
 MARQUEE_DISPLAY_WIDTH = 148
 MARQUEE_DISPLAY_HEIGHT = 276

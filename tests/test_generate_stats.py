@@ -191,11 +191,18 @@ class GenerateStatsTest(unittest.TestCase):
         self.assertIn("generated/marquee-left-display.gif", readme)
         self.assertIn("generated/marquee-right-display.gif", readme)
         self.assertIn("generated/marquee-hidden.svg", readme)
-        self.assertIn('media="(min-width: 860px)"', readme)
+        self.assertIn(
+            f'media="(min-width: {generate_stats.README_MARQUEE_MIN_WIDTH}px)"',
+            readme,
+        )
+        self.assertNotIn('media="(min-width: 860px)"', readme)
         self.assertNotIn("generated/marquee-left-top.svg", readme)
         self.assertNotIn("generated/marquee-right-top.svg", readme)
         self.assertNotIn("<table", readme)
         self.assertNotIn("<div align=\"center\">", readme)
+
+    def test_readme_marquee_breakpoint_leaves_room_for_github_profile_layout(self):
+        self.assertGreaterEqual(generate_stats.README_MARQUEE_MIN_WIDTH, 1160)
 
     def test_write_marquee_gifs_writes_display_gifs_and_hidden_placeholder(self):
         with TemporaryDirectory() as tmpdir:
