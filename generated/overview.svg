@@ -61,7 +61,7 @@
     <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
     <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🔖</text>
     <text x="36" y="11" class="lbl">Total PRs</text>
-    <text x="36" y="29" class="val">28</text>
+    <text x="36" y="29" class="val">29</text>
   </g>
   <g transform="translate(22,130)">
     <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
@@ -79,7 +79,7 @@
     <circle cx="14" cy="14" r="14" fill="#fe428e" fill-opacity="0.12"/>
     <text x="14" y="19" text-anchor="middle" font-size="15" font-family="'Segoe UI Emoji',sans-serif">🤝</text>
     <text x="36" y="11" class="lbl">Contributed to</text>
-    <text x="36" y="29" class="val">31</text>
+    <text x="36" y="29" class="val">32</text>
   </g>
 
   <!-- footer -->
